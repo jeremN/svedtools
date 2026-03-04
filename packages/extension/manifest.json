@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Svelte DevTools Pro",
+  "version": "0.0.1",
+  "description": "Developer tools for Svelte 5 — component tree, reactivity graph, profiler, and update tracer",
+  "devtools_page": "src/devtools.html",
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "Svelte DevTools Pro"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
