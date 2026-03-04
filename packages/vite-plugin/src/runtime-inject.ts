@@ -366,12 +366,31 @@ export function getBridgeCode(): string {
     // Wrap an effect function for profiling
     wrapEffect(fn, effectId) {
       if (!profilingActive) return fn;
+      // Cache the Svelte reaction object for deps counting
+      let reactionRef = null;
       return function wrappedEffect() {
         const start = performance.now();
         const result = fn.apply(this, arguments);
         const duration = performance.now() - start;
         if (effectTimings.length >= MAX_PROFILING_ENTRIES) effectTimings.shift();
-        effectTimings.push({ effectId, duration, timestamp: start });
+        const effMeta = effectMap.get(effectId);
+        // Lazily find the Svelte reaction that owns this wrapped function
+        if (!reactionRef) {
+          for (const [signal] of signalMap) {
+            if (signal.reactions) {
+              for (const r of signal.reactions) {
+                if (r && r.fn === wrappedEffect) { reactionRef = r; break; }
+              }
+            }
+            if (reactionRef) break;
+          }
+        }
+        effectTimings.push({
+          effectId,
+          label: effMeta?.label || null,
+          duration,
+          depsCount: reactionRef?.deps?.length ?? 0,
+        });
         try {
           console.timeStamp(
             'Effect: ' + (effectMap.get(effectId)?.label || effectId),

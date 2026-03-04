@@ -21,7 +21,7 @@ Dev-mode only (prod support deferred).
 | Phase 3: Extension Shell | **Complete** | `feat/phase-1-scaffolding` |
 | Phase 4: Component Tree + State Inspection | **Complete** | `feat/phase-1-scaffolding` |
 | Phase 5: Reactivity Graph Visualization | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 6: Performance Profiler | Pending | — |
+| Phase 6: Performance Profiler | **Complete** | `feat/phase-1-scaffolding` |
 | Phase 7: "Why Did This Update?" Tracing | Pending | — |
 
 ---
@@ -707,3 +707,26 @@ export default defineConfig({
   ]
 });
 ```
+
+---
+
+## Phase 6: Performance Profiler — Completion Notes
+
+**Files created:**
+- `packages/extension/src/panel/lib/profiler.svelte.ts` — Reactive profiler store with session tokens, aggregation functions
+- `packages/extension/src/panel/components/Profiler.svelte` — Profiler UI with start/stop toggle, elapsed timer, component & effect tables
+
+**Files modified:**
+- `packages/vite-plugin/src/transform.ts` — `instrumentUserEffect` now wraps effect functions through `wrapEffect` for timing instrumentation
+- `packages/vite-plugin/src/runtime-inject.ts` — `wrapEffect` uses lazy reaction lookup for accurate `depsCount`, effect timings match protocol shape
+- `packages/extension/src/panel/main.ts` — Added `processProfilerMessage` + `resetProfilerState` routing
+- `packages/extension/src/panel/App.svelte` — Replaced Profiler placeholder with `<Profiler />`
+- `packages/shared/src/protocol.ts` — `ProfilerDataMessage` with `effectTimings` array
+
+**Review fixes applied:**
+- Critical: `depsCount` now reads actual `reaction.deps.length` via lazy cached lookup (was `fn.length`)
+- Critical: Session token + `pendingStopToken` prevents race condition on stop-then-start cycles
+- Critical: Transform now generates IIFE that calls both `registerEffect` AND `wrapEffect` (was missing `wrapEffect`)
+- Important: `clearData` guards against clearing during active recording
+- Important: Effect label aggregation updates from later entries when earlier ones are null
+- Important: Panel-side cap of 10,000 entries prevents unbounded memory growth

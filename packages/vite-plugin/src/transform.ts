@@ -171,24 +171,27 @@ function instrumentPop(s: MagicString, node: any): void {
 
 /**
  * $.user_effect(fn)
- * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) || fn; })())
+ * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) ?? fn; })())
  *
- * We register the effect and optionally wrap it for profiling.
- * But simpler approach: just add a registration call before the effect.
- *
- * Actually, simplest: inject a registration call right before the statement.
+ * We register the effect AND wrap the function for profiling.
+ * wrapEffect returns the original fn when profiling is inactive,
+ * or a timing-instrumented wrapper when profiling is active.
  */
 function instrumentUserEffect(s: MagicString, node: any, dollar: string): void {
   const args = node.arguments;
   if (args.length < 1) return;
 
-  // Find the statement that contains this expression
-  // Insert registration before the $.user_effect call
+  // Wrap the fn argument with an IIFE that registers + wraps for profiling.
+  // Uses prependLeft/appendRight (additive) rather than overwrite to avoid
+  // conflicts with inner instrumentation (e.g. $.set inside the effect body).
   s.prependLeft(
-    node.start,
-    `(window.__svelte_devtools__?.registerEffect(${s.slice(args[0].start, args[0].end)}), `,
+    args[0].start,
+    `(() => { const __fn = `,
   );
-  s.appendRight(node.end, ')');
+  s.appendRight(
+    args[0].end,
+    `; const __eid = window.__svelte_devtools__?.registerEffect(__fn); return window.__svelte_devtools__?.wrapEffect(__fn, __eid) ?? __fn; })()`,
+  );
 }
 
 /**
