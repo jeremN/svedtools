@@ -22,7 +22,7 @@ Dev-mode only (prod support deferred).
 | Phase 4: Component Tree + State Inspection | **Complete** | `feat/phase-1-scaffolding` |
 | Phase 5: Reactivity Graph Visualization | **Complete** | `feat/phase-1-scaffolding` |
 | Phase 6: Performance Profiler | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 7: "Why Did This Update?" Tracing | Pending | — |
+| Phase 7: "Why Did This Update?" Tracing | **Complete** | `feat/phase-1-scaffolding` |
 
 ---
 
@@ -730,3 +730,31 @@ export default defineConfig({
 - Important: `clearData` guards against clearing during active recording
 - Important: Effect label aggregation updates from later entries when earlier ones are null
 - Important: Panel-side cap of 10,000 entries prevents unbounded memory growth
+
+---
+
+## Phase 7: "Why Did This Update?" Tracing — Completion Notes
+
+**Files created:**
+- `packages/extension/src/panel/lib/tracer.svelte.ts` — Reactive trace store with ring buffer of 200 entries
+- `packages/extension/src/panel/components/UpdateTracer.svelte` — Timeline UI with expandable trace detail view
+
+**Files modified:**
+- `packages/vite-plugin/src/transform.ts` — $.set now calls `preMutation` before and `onMutation` after; $.update uses IIFE pattern to preserve return value while capturing both
+- `packages/vite-plugin/src/runtime-inject.ts` — Added preMutation/preCapture, enhanced onMutation with stack traces and old/new value capture, MutationObserver for DOM changes, buildChainFromSignal for reactive graph walking, queueMicrotask-based trace flush
+- `packages/shared/src/types.ts` — Added `oldValue`/`newValue` to `UpdateTrace.rootCause`
+- `packages/extension/src/panel/main.ts` — Added processTraceMessage + resetTracerState routing
+- `packages/extension/src/panel/App.svelte` — Replaced Tracer placeholder with `<UpdateTracer />`
+
+**Architecture decisions:**
+- Always-on tracing (no start/stop toggle) — captures every mutation when DevTools panel is connected
+- Microtask batching — mutations in the same synchronous cycle are grouped into a single flush
+- DOM mutations attributed to the entire batch (per-signal attribution would require Svelte-internal integration)
+- Chain building walks the reactive graph from the mutated signal through its reactions
+
+**Review fixes applied:**
+- Switched trace timestamps from `performance.now()` to `Date.now()` for correct cross-context display
+- Switched `preCapture` to `WeakMap` to prevent memory leaks on orphaned signals
+- Forwarded `oldValue`/`newValue` through rootCause to panel (core "Why?" diagnostic info)
+- Added `MAX_TRACE_PENDING` cap on tracePending array
+- Removed dead `.type-state` CSS class
