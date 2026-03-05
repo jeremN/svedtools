@@ -4,6 +4,7 @@
   import StateInspector from './components/StateInspector.svelte';
   import ReactivityGraph from './components/ReactivityGraph.svelte';
   import Profiler from './components/Profiler.svelte';
+  import UpdateTracer from './components/UpdateTracer.svelte';
   import { getSearchFilter, setSearchFilter } from './lib/components.svelte.js';
 
   const tabs = ['Components', 'Reactivity', 'Profiler', 'Tracer'] as const;
@@ -55,7 +56,7 @@
     {:else if activeTab === 'Profiler'}
       <Profiler />
     {:else}
-      <div style="padding: 16px"><p>Update tracer will appear here</p></div>
+      <UpdateTracer />
     {/if}
   </main>
 
