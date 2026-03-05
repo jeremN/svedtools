@@ -19,11 +19,17 @@
 	let selectedId = $derived(getSelectedTraceId());
 	let selectedTrace = $derived(getSelectedTrace());
 	let showStack = $state(false);
+	let now = $state(Date.now());
+
+	$effect(() => {
+		const id = setInterval(() => { now = Date.now(); }, 1000);
+		return () => clearInterval(id);
+	});
 
 	let sortedTraces = $derived([...traces].reverse());
 
 	function formatTimeAgo(timestamp: number): string {
-		const seconds = Math.round((Date.now() - timestamp) / 1000);
+		const seconds = Math.round((now - timestamp) / 1000);
 		if (seconds < 60) return seconds + 's ago';
 		const minutes = Math.floor(seconds / 60);
 		return minutes + 'm ago';

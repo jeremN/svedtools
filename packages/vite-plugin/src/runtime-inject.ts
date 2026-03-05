@@ -25,16 +25,13 @@ export function getBridgeCode(): string {
   // -- Signal & Effect registries --
   const signalMap = new Map();   // signal object -> { id, label, componentId }
   const effectMap = new Map();   // effect id -> { id, label, componentId, fn }
-  const stableReactionIds = new Map(); // reaction object -> stable graph node id (persists across buildGraph calls)
+  const stableReactionIds = new WeakMap(); // reaction object -> stable graph node id (persists across buildGraph calls)
 
   // -- Profiling --
   const MAX_PROFILING_ENTRIES = 10000;
   let profilingActive = false;
   const renderTimings = [];
   const effectTimings = [];
-
-  // -- Mutation queue (for update tracing) --
-  const pendingMutations = [];
 
   // -- Tracing --
   const MAX_TRACE_PENDING = 200;
@@ -352,7 +349,7 @@ export function getBridgeCode(): string {
           ? componentStack[componentStack.length - 1].id
           : null
       );
-      effectMap.set(id, { id, label: fn.name || null, componentId: currentComponent, fn });
+      effectMap.set(id, { id, label: fn.name || null, componentId: currentComponent, fn, wrappedFn: null });
 
       if (currentComponent) {
         const node = componentMap.get(currentComponent);
@@ -364,22 +361,14 @@ export function getBridgeCode(): string {
 
     // Capture signal value BEFORE mutation (called by $.set and $.update transforms)
     preMutation(signal) {
-      if (!signalMap.has(signal)) return;
-      try { preCapture.set(signal, safeSerialize(signal.v)); } catch(e) { preCapture.set(signal, null); }
+      if (!signal || typeof signal !== 'object' || !signalMap.has(signal)) return;
+      try { preCapture.set(signal, safeSerialize(signal.v)); } catch(e) { try { preCapture.set(signal, null); } catch(e2) {} }
     },
 
     // Called AFTER $.set or $.update completes (to avoid double evaluation)
     onMutation(signal) {
       const meta = signalMap.get(signal);
       if (!meta) return;
-
-      if (pendingMutations.length >= 1000) pendingMutations.shift();
-      pendingMutations.push({
-        signalId: meta.id,
-        signalLabel: meta.label,
-        componentId: meta.componentId,
-        timestamp: performance.now(),
-      });
 
       // Emit for live updates
       emit({
@@ -419,7 +408,7 @@ export function getBridgeCode(): string {
       if (!profilingActive) return fn;
       // Cache the Svelte reaction object for deps counting
       let reactionRef = null;
-      return function wrappedEffect() {
+      const wrapped = function wrappedEffect() {
         const start = performance.now();
         const result = fn.apply(this, arguments);
         const duration = performance.now() - start;
@@ -454,6 +443,10 @@ export function getBridgeCode(): string {
         } catch {}
         return result;
       };
+      // Store wrapped reference so chain building can match r.fn
+      const effEntry = effectMap.get(effectId);
+      if (effEntry) effEntry.wrappedFn = wrapped;
+      return wrapped;
     },
 
     // Get the full component tree (for panel reconnection)
@@ -542,7 +535,7 @@ export function getBridgeCode(): string {
             }
             if (!reactionComponentId) {
               for (const [, eff] of effectMap) {
-                if (eff.fn === reaction.fn) {
+                if (eff.fn === reaction.fn || eff.wrappedFn === reaction.fn) {
                   reactionComponentId = eff.componentId;
                   break;
                 }
@@ -611,7 +604,7 @@ export function getBridgeCode(): string {
         let effectId = null;
         if (!isDerived) {
           for (const [eid, eff] of effectMap) {
-            if (eff.fn === r.fn) { effectId = eid; break; }
+            if (eff.fn === r.fn || eff.wrappedFn === r.fn) { effectId = eid; break; }
           }
         }
 
