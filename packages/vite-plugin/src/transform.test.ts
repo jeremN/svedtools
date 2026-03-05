@@ -79,8 +79,9 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "doubled")');
   });
 
-  it('instruments $.set with onMutation call', () => {
+  it('instruments $.set with preMutation and onMutation calls', () => {
     const result = transformSvelteOutput(EFFECT_FIXTURE, 'EffectChain.svelte');
+    expect(result!.code).toContain('__svelte_devtools__?.preMutation(processed)');
     expect(result!.code).toContain('__svelte_devtools__?.onMutation(processed)');
   });
 

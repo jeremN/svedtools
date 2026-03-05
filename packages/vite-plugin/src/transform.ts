@@ -196,10 +196,11 @@ function instrumentUserEffect(s: MagicString, node: any, dollar: string): void {
 
 /**
  * $.set(signal, value)
- * → ($.set(signal, value), window.__svelte_devtools__?.onMutation(signal))
+ * → (preMutation(signal), $.set(signal, value), onMutation(signal))
  *
- * onMutation is called AFTER set to avoid double-evaluating the value expression.
- * The bridge reads the new value from the signal directly.
+ * preMutation captures the old value (signal.v) before set runs.
+ * onMutation is called AFTER set to read the new value from the signal.
+ * This enables "Why Did This Update?" tracing by comparing old vs new.
  */
 function instrumentSet(s: MagicString, node: any): void {
   const args = node.arguments;
@@ -207,7 +208,8 @@ function instrumentSet(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
-  s.prependLeft(node.start, '(');
+  // Capture old value before set, then notify after set
+  s.prependLeft(node.start, `(window.__svelte_devtools__?.preMutation(${signalArg}), `);
   s.appendRight(node.end, `, window.__svelte_devtools__?.onMutation(${signalArg}))`);
 }
 
