@@ -118,6 +118,13 @@
 								{#if selectedTrace.rootCause.componentName}
 									<span class="component-tag">({selectedTrace.rootCause.componentName})</span>
 								{/if}
+								{#if selectedTrace.rootCause.oldValue != null || selectedTrace.rootCause.newValue != null}
+									<div class="value-change">
+										<span class="old-value">{formatValue(selectedTrace.rootCause.oldValue)}</span>
+										<span class="arrow">&rarr;</span>
+										<span class="new-value">{formatValue(selectedTrace.rootCause.newValue)}</span>
+									</div>
+								{/if}
 							</div>
 							{#if selectedTrace.rootCause.stackTrace}
 								<button
@@ -350,6 +357,23 @@
 		font-size: 11px;
 	}
 
+	.value-change {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		margin-top: 4px;
+		font-size: 11px;
+	}
+
+	.old-value {
+		color: #e54545;
+		text-decoration: line-through;
+	}
+
+	.new-value {
+		color: #4ec9b0;
+	}
+
 	.stack-toggle {
 		background: none;
 		border: none;
@@ -416,10 +440,6 @@
 		color: #4ec9b0;
 	}
 
-	.type-state {
-		background: #2a2018;
-		color: #ce9178;
-	}
 
 	.step-label {
 		color: #ccc;

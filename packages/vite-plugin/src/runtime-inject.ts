@@ -41,7 +41,7 @@ export function getBridgeCode(): string {
   let traceFlushScheduled = false;
   const tracePending = [];
   const traceDomMutations = [];
-  const preCapture = new Map();
+  const preCapture = new WeakMap();
 
   // -- Helpers --
   function emit(payload) {
@@ -407,7 +407,7 @@ export function getBridgeCode(): string {
         stackTrace: stack,
         oldValue,
         newValue,
-        timestamp: performance.now(),
+        timestamp: Date.now(),
         _signal: signal,
       });
 
@@ -669,6 +669,8 @@ export function getBridgeCode(): string {
               componentId: rootMut.componentId,
               componentName: rootMut.componentName,
               stackTrace: rootMut.stackTrace,
+              oldValue: rootMut.oldValue,
+              newValue: rootMut.newValue,
             },
             chain: chain,
             domMutations: domSnap,

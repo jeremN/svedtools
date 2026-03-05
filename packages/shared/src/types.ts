@@ -90,6 +90,8 @@ export interface UpdateTrace {
     componentId: NodeId | null;
     componentName: string | null;
     stackTrace: string | null;
+    oldValue: SerializedValue | null;
+    newValue: SerializedValue | null;
   };
   chain: UpdateChainStep[];
   domMutations: DomMutation[];
