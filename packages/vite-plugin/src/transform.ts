@@ -215,11 +215,10 @@ function instrumentSet(s: MagicString, node: any): void {
 
 /**
  * $.update(signal) or $.update(signal, -1)
- * → (window.__svelte_devtools__?.onMutation(signal), $.update(signal))
+ * → (() => { preMutation(signal); const __r = $.update(signal, -1); onMutation(signal); return __r; })()
  *
- * Unlike $.set, the signal arg is always a simple identifier (no side effects),
- * so calling onMutation BEFORE update is safe. We keep the before-call pattern
- * to preserve $.update's return value (used in `return $.update(count, -1)`).
+ * IIFE preserves $.update's return value (used in `return $.update(count, -1)`)
+ * while capturing pre/post mutation values for update tracing.
  */
 function instrumentUpdate(s: MagicString, node: any): void {
   const args = node.arguments;
@@ -227,11 +226,15 @@ function instrumentUpdate(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
+  // IIFE preserves $.update return value while capturing pre/post mutation
   s.prependLeft(
     node.start,
-    `(window.__svelte_devtools__?.onMutation(${signalArg}), `,
+    `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `,
   );
-  s.appendRight(node.end, ')');
+  s.appendRight(
+    node.end,
+    `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`,
+  );
 }
 
 /**
