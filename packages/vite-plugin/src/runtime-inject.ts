@@ -36,6 +36,13 @@ export function getBridgeCode(): string {
   // -- Mutation queue (for update tracing) --
   const pendingMutations = [];
 
+  // -- Tracing --
+  const MAX_TRACE_PENDING = 200;
+  let traceFlushScheduled = false;
+  const tracePending = [];
+  const traceDomMutations = [];
+  const preCapture = new Map();
+
   // -- Helpers --
   function emit(payload) {
     window.postMessage({ source: 'svelte-devtools-pro', payload }, window.location.origin);
@@ -95,6 +102,21 @@ export function getBridgeCode(): string {
     if (v instanceof Date) return v.toISOString();
     if (v instanceof Error) return v.name;
     return '{...}';
+  }
+
+  function summarizeDomMutation(m) {
+    if (m.type === 'attributes') {
+      return (m.target.tagName || '').toLowerCase() + '.' + m.attributeName + ' changed';
+    }
+    if (m.type === 'characterData') {
+      return 'text content changed';
+    }
+    const added = m.addedNodes ? m.addedNodes.length : 0;
+    const removed = m.removedNodes ? m.removedNodes.length : 0;
+    const parts = [];
+    if (added) parts.push(added + ' added');
+    if (removed) parts.push(removed + ' removed');
+    return parts.join(', ') || 'children changed';
   }
 
   // -- Highlight overlay --
@@ -340,6 +362,12 @@ export function getBridgeCode(): string {
       return id;
     },
 
+    // Capture signal value BEFORE mutation (called by $.set and $.update transforms)
+    preMutation(signal) {
+      if (!signalMap.has(signal)) return;
+      try { preCapture.set(signal, safeSerialize(signal.v)); } catch(e) { preCapture.set(signal, null); }
+    },
+
     // Called AFTER $.set or $.update completes (to avoid double evaluation)
     onMutation(signal) {
       const meta = signalMap.get(signal);
@@ -361,6 +389,29 @@ export function getBridgeCode(): string {
         stateIds: [],
         effectIds: [],
       });
+
+      // -- Tracing --
+      const stack = new Error().stack || null;
+      const oldValue = preCapture.get(signal) ?? null;
+      preCapture.delete(signal);
+      let newValue = null;
+      try { newValue = safeSerialize(signal.v); } catch(e) {}
+
+      const compNode = meta.componentId ? componentMap.get(meta.componentId) : null;
+      if (tracePending.length >= MAX_TRACE_PENDING) tracePending.shift();
+      tracePending.push({
+        signalId: meta.id,
+        signalLabel: meta.label,
+        componentId: meta.componentId,
+        componentName: compNode ? compNode.name : null,
+        stackTrace: stack,
+        oldValue,
+        newValue,
+        timestamp: performance.now(),
+        _signal: signal,
+      });
+
+      scheduleTraceFlush();
     },
 
     // Wrap an effect function for profiling
@@ -544,6 +595,89 @@ export function getBridgeCode(): string {
     },
   };
 
+  function buildChainFromSignal(signal) {
+    const steps = [];
+    if (!signal || !signal.reactions) return steps;
+
+    const visited = new Set();
+    function walkReactions(reactions) {
+      if (!reactions || !Array.isArray(reactions)) return;
+      for (const r of reactions) {
+        if (!r || visited.has(r)) continue;
+        visited.add(r);
+        if (steps.length >= 50) return;
+
+        const isDerived = !('teardown' in r);
+        let effectId = null;
+        if (!isDerived) {
+          for (const [eid, eff] of effectMap) {
+            if (eff.fn === r.fn) { effectId = eid; break; }
+          }
+        }
+
+        let reactionLabel = r.label || (r.fn && r.fn.name) || null;
+        let reactionValue = null;
+        if (isDerived) {
+          try { reactionValue = safeSerialize(r.v); } catch(e) {}
+        }
+
+        let reactionSignalId = stableReactionIds.get(r);
+        if (!reactionSignalId) {
+          reactionSignalId = genId();
+          stableReactionIds.set(r, reactionSignalId);
+        }
+
+        steps.push({
+          signalId: reactionSignalId,
+          signalLabel: reactionLabel,
+          oldValue: null,
+          newValue: reactionValue,
+          effectId: effectId,
+        });
+
+        if (isDerived && r.reactions) {
+          walkReactions(r.reactions);
+        }
+      }
+    }
+    walkReactions(signal.reactions);
+    return steps;
+  }
+
+  function scheduleTraceFlush() {
+    if (traceFlushScheduled) return;
+    traceFlushScheduled = true;
+    queueMicrotask(function() {
+      traceFlushScheduled = false;
+      if (tracePending.length === 0) return;
+
+      const mutations = tracePending.splice(0);
+      // DOM mutations are attributed to the entire batch — all traces in this
+      // microtask share the same snapshot. postMessage clones each independently.
+      const domSnap = traceDomMutations.splice(0);
+
+      for (const rootMut of mutations) {
+        const chain = buildChainFromSignal(rootMut._signal);
+        emit({
+          type: 'trace:update',
+          trace: {
+            id: genId(),
+            timestamp: rootMut.timestamp,
+            rootCause: {
+              signalId: rootMut.signalId,
+              signalLabel: rootMut.signalLabel,
+              componentId: rootMut.componentId,
+              componentName: rootMut.componentName,
+              stackTrace: rootMut.stackTrace,
+            },
+            chain: chain,
+            domMutations: domSnap,
+          },
+        });
+      }
+    });
+  }
+
   // -- Listen for messages FROM extension --
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
@@ -615,6 +749,36 @@ export function getBridgeCode(): string {
     svelteVersion: window.__svelte?.v || 'unknown',
     protocolVersion: 1,
   });
+
+  // -- DOM MutationObserver for tracing --
+  try {
+    const domObserver = new MutationObserver(function(mutations) {
+      for (let i = 0; i < mutations.length && traceDomMutations.length < 100; i++) {
+        const m = mutations[i];
+        traceDomMutations.push({
+          type: m.type,
+          targetTag: (m.target.tagName || '#text').toLowerCase(),
+          targetId: m.target.id || null,
+          targetClass: typeof m.target.className === 'string' ? m.target.className : null,
+          attributeName: m.attributeName || null,
+          summary: summarizeDomMutation(m),
+        });
+      }
+    });
+    if (document.body) {
+      domObserver.observe(document.body, {
+        childList: true, subtree: true,
+        attributes: true, characterData: true,
+      });
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        domObserver.observe(document.body, {
+          childList: true, subtree: true,
+          attributes: true, characterData: true,
+        });
+      });
+    }
+  } catch(e) {}
 
   console.log('[svelte-devtools] Bridge initialized');
 })();
