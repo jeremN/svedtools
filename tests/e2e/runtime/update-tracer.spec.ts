@@ -1,27 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Update Tracer', () => {
-  test('trace:update message is emitted on state mutation', async ({
-    page,
-  }) => {
+  test('trace:update message is emitted on state mutation', async ({ page }) => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(500);
 
     // Set up listener BEFORE triggering the click
     const traceResult = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'trace:update'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'trace:update') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -29,9 +20,7 @@ test.describe('Update Tracer', () => {
         });
 
         // Click increment to trigger a state mutation
-        const btn = document.querySelector(
-          '[data-testid="counter-increment"]'
-        ) as HTMLButtonElement;
+        const btn = document.querySelector('[data-testid="counter-increment"]') as HTMLButtonElement;
         if (btn) btn.click();
       });
     });
@@ -50,18 +39,11 @@ test.describe('Update Tracer', () => {
 
     const traceResult = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'trace:update'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'trace:update') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -69,9 +51,7 @@ test.describe('Update Tracer', () => {
         });
 
         // Click increment to trigger a state mutation
-        const btn = document.querySelector(
-          '[data-testid="counter-increment"]'
-        ) as HTMLButtonElement;
+        const btn = document.querySelector('[data-testid="counter-increment"]') as HTMLButtonElement;
         if (btn) btn.click();
       });
     });

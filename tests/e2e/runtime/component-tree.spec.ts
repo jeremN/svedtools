@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Component Tree', () => {
-  test('bridge initializes and exposes __svelte_devtools__ on the window', async ({
-    page,
-  }) => {
+  test('bridge initializes and exposes __svelte_devtools__ on the window', async ({ page }) => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(500);
 
@@ -19,11 +17,7 @@ test.describe('Component Tree', () => {
       (window as any).__bridgeReadyReceived = false;
       window.addEventListener('message', (event) => {
         const data = event.data;
-        if (
-          data &&
-          data.source === 'svelte-devtools-pro' &&
-          data.payload?.type === 'bridge:ready'
-        ) {
+        if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'bridge:ready') {
           (window as any).__bridgeReadyReceived = true;
         }
       });
@@ -32,9 +26,7 @@ test.describe('Component Tree', () => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(1000);
 
-    const received = await page.evaluate(
-      () => (window as any).__bridgeReadyReceived
-    );
+    const received = await page.evaluate(() => (window as any).__bridgeReadyReceived);
     expect(received).toBe(true);
   });
 
@@ -56,9 +48,7 @@ test.describe('Component Tree', () => {
     expect(node).toHaveProperty('children');
   });
 
-  test('component tree includes parent-child relationships on context page', async ({
-    page,
-  }) => {
+  test('component tree includes parent-child relationships on context page', async ({ page }) => {
     await page.goto('/demos/context');
     await page.waitForTimeout(500);
 
@@ -69,9 +59,7 @@ test.describe('Component Tree', () => {
     expect(tree.length).toBeGreaterThan(1);
 
     // Find a node that has children
-    const parents = tree.filter(
-      (n: any) => n.children && n.children.length > 0
-    );
+    const parents = tree.filter((n: any) => n.children && n.children.length > 0);
     expect(parents.length).toBeGreaterThan(0);
 
     // Find a node that has a parentId

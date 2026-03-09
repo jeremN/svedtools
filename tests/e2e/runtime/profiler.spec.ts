@@ -8,10 +8,7 @@ test.describe('Profiler', () => {
     // Set up listener for profiler:data BEFORE triggering stop
     const profilerData = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         // Start profiling
         window.postMessage(
@@ -19,17 +16,13 @@ test.describe('Profiler', () => {
             source: 'svelte-devtools-pro',
             payload: { type: 'profiler:start' },
           },
-          window.location.origin
+          window.location.origin,
         );
 
         // Listen for profiler:data response
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'profiler:data'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'profiler:data') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -37,9 +30,7 @@ test.describe('Profiler', () => {
         });
 
         // Click increment to generate a render while profiling
-        const btn = document.querySelector(
-          '[data-testid="counter-increment"]'
-        ) as HTMLButtonElement;
+        const btn = document.querySelector('[data-testid="counter-increment"]') as HTMLButtonElement;
         if (btn) btn.click();
 
         // Small delay then stop profiling
@@ -49,7 +40,7 @@ test.describe('Profiler', () => {
               source: 'svelte-devtools-pro',
               payload: { type: 'profiler:stop' },
             },
-            window.location.origin
+            window.location.origin,
           );
         }, 200);
       });

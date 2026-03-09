@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('State Editing via Bridge', () => {
-  test('bridge signalMap exposes signal values for reading', async ({
-    page,
-  }) => {
+  test('bridge signalMap exposes signal values for reading', async ({ page }) => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(500);
 
@@ -29,9 +27,7 @@ test.describe('State Editing via Bridge', () => {
     expect(signalValue).toBe(2);
   });
 
-  test('inspect:component returns state snapshot with current values', async ({
-    page,
-  }) => {
+  test('inspect:component returns state snapshot with current values', async ({ page }) => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(500);
 
@@ -51,18 +47,11 @@ test.describe('State Editing via Bridge', () => {
     // Send inspect:component and capture state:snapshot response
     const snapshot = await page.evaluate((componentId: string) => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'state:snapshot'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'state:snapshot') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -74,7 +63,7 @@ test.describe('State Editing via Bridge', () => {
             source: 'svelte-devtools-pro',
             payload: { type: 'inspect:component', id: componentId },
           },
-          window.location.origin
+          window.location.origin,
         );
       });
     }, counter!.id);
@@ -84,9 +73,7 @@ test.describe('State Editing via Bridge', () => {
     expect(snapshot.signals.length).toBeGreaterThan(0);
 
     // Find the count signal and verify its value reflects the clicks
-    const countSignal = snapshot.signals.find(
-      (s: any) => s.label === 'count'
-    );
+    const countSignal = snapshot.signals.find((s: any) => s.label === 'count');
     expect(countSignal).toBeDefined();
     expect(countSignal.value).toBe(3);
   });
@@ -100,9 +87,7 @@ test.describe('State Editing via Bridge', () => {
     await page.waitForTimeout(200);
 
     // Read the derived "doubled" value from the DOM
-    const doubledText = await page
-      .locator('[data-testid="counter-doubled"]')
-      .textContent();
+    const doubledText = await page.locator('[data-testid="counter-doubled"]').textContent();
     expect(doubledText).toContain('2');
 
     // Verify the bridge can enumerate signals including derived ones

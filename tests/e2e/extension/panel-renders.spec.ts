@@ -1,23 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Extension Panel', () => {
-  test('extension loads and bridge detects Svelte on page', async ({
-    context,
-  }) => {
+  test('extension loads and bridge detects Svelte on page', async ({ context }) => {
     const page = await context.newPage();
     await page.goto('/demos/counter');
     await page.waitForTimeout(1000);
 
     // Verify bridge initialized (extension content script should relay bridge:ready)
-    const bridgeReady = await page.evaluate(
-      () => !!window.__svelte_devtools__
-    );
+    const bridgeReady = await page.evaluate(() => !!window.__svelte_devtools__);
     expect(bridgeReady).toBe(true);
   });
 
-  test('bridge exposes component tree through extension context', async ({
-    context,
-  }) => {
+  test('bridge exposes component tree through extension context', async ({ context }) => {
     const page = await context.newPage();
     await page.goto('/demos/counter');
     await page.waitForTimeout(1000);
@@ -36,9 +30,7 @@ test.describe('Extension Panel', () => {
     expect(counter).toHaveProperty('children');
   });
 
-  test('bridge:ready message is received in extension context', async ({
-    context,
-  }) => {
+  test('bridge:ready message is received in extension context', async ({ context }) => {
     const page = await context.newPage();
 
     // Set up listener before navigating
@@ -46,11 +38,7 @@ test.describe('Extension Panel', () => {
       (window as any).__bridgeReadyReceived = false;
       window.addEventListener('message', (event) => {
         const data = event.data;
-        if (
-          data &&
-          data.source === 'svelte-devtools-pro' &&
-          data.payload?.type === 'bridge:ready'
-        ) {
+        if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'bridge:ready') {
           (window as any).__bridgeReadyReceived = true;
         }
       });
@@ -59,9 +47,7 @@ test.describe('Extension Panel', () => {
     await page.goto('/demos/counter');
     await page.waitForTimeout(1000);
 
-    const received = await page.evaluate(
-      () => (window as any).__bridgeReadyReceived
-    );
+    const received = await page.evaluate(() => (window as any).__bridgeReadyReceived);
     expect(received).toBe(true);
   });
 });

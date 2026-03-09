@@ -73,11 +73,12 @@ chrome.runtime.onConnect.addListener((port) => {
       // First message from panel identifies the tab
       if (message.type === 'panel:init') {
         if (typeof message.tabId !== 'number' || !Number.isFinite(message.tabId)) return;
-        panelTabId = message.tabId;
-        panelPorts.set(panelTabId, port);
+        const initTabId: number = message.tabId;
+        panelTabId = initTabId;
+        panelPorts.set(initTabId, port);
 
         // Replay cached bridge:ready with full version data
-        const svelteInfo = svelteTabs.get(panelTabId);
+        const svelteInfo = svelteTabs.get(initTabId);
         if (svelteInfo) {
           port.postMessage({
             type: 'bridge:ready',

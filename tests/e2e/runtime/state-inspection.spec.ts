@@ -6,9 +6,7 @@ test.describe('State Inspection', () => {
     await page.waitForTimeout(500);
 
     // Verify initial value
-    const initialValue = await page
-      .locator('[data-testid="counter-value"]')
-      .textContent();
+    const initialValue = await page.locator('[data-testid="counter-value"]').textContent();
     expect(initialValue?.trim()).toBe('0');
 
     // Click increment
@@ -16,15 +14,11 @@ test.describe('State Inspection', () => {
     await page.waitForTimeout(100);
 
     // Verify DOM updated
-    const updatedValue = await page
-      .locator('[data-testid="counter-value"]')
-      .textContent();
+    const updatedValue = await page.locator('[data-testid="counter-value"]').textContent();
     expect(updatedValue?.trim()).toBe('1');
 
     // Verify derived value also updated
-    const doubledValue = await page
-      .locator('[data-testid="counter-doubled"]')
-      .textContent();
+    const doubledValue = await page.locator('[data-testid="counter-doubled"]').textContent();
     expect(doubledValue).toContain('2');
   });
 
@@ -38,26 +32,17 @@ test.describe('State Inspection', () => {
     });
 
     // Find a component that has stateIds
-    const componentWithState = tree.find(
-      (n: any) => n.stateIds && n.stateIds.length > 0
-    );
+    const componentWithState = tree.find((n: any) => n.stateIds && n.stateIds.length > 0);
     expect(componentWithState).toBeDefined();
 
     // Send inspect:component message and listen for state:snapshot
     const snapshot = await page.evaluate((componentId: string) => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'state:snapshot'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'state:snapshot') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -69,7 +54,7 @@ test.describe('State Inspection', () => {
             source: 'svelte-devtools-pro',
             payload: { type: 'inspect:component', id: componentId },
           },
-          window.location.origin
+          window.location.origin,
         );
       });
     }, componentWithState!.id);

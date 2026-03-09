@@ -8,3 +8,4 @@ build/
 .playwright-mcp/
 test-results/
 playwright-report/
+blob-report/

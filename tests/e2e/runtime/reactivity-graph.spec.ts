@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Reactivity Graph', () => {
-  test('buildGraph() returns nodes and edges for effect chain page', async ({
-    page,
-  }) => {
+  test('buildGraph() returns nodes and edges for effect chain page', async ({ page }) => {
     await page.goto('/demos/effect-chain');
     await page.waitForTimeout(500);
 
@@ -31,26 +29,17 @@ test.describe('Reactivity Graph', () => {
     expect(edge).toHaveProperty('to');
   });
 
-  test('graph:snapshot message is emitted when graph:request is sent', async ({
-    page,
-  }) => {
+  test('graph:snapshot message is emitted when graph:request is sent', async ({ page }) => {
     await page.goto('/demos/effect-chain');
     await page.waitForTimeout(500);
 
     const snapshot = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
-        const timeout = setTimeout(
-          () => resolve({ error: 'timeout' }),
-          5000
-        );
+        const timeout = setTimeout(() => resolve({ error: 'timeout' }), 5000);
 
         window.addEventListener('message', function handler(event) {
           const data = event.data;
-          if (
-            data &&
-            data.source === 'svelte-devtools-pro' &&
-            data.payload?.type === 'graph:snapshot'
-          ) {
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'graph:snapshot') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
             resolve(data.payload);
@@ -62,7 +51,7 @@ test.describe('Reactivity Graph', () => {
             source: 'svelte-devtools-pro',
             payload: { type: 'graph:request', componentId: null },
           },
-          window.location.origin
+          window.location.origin,
         );
       });
     });
