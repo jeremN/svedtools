@@ -34,6 +34,11 @@
 				<h3>Demos</h3>
 				<ul>
 					<li><a href={resolve('/demos')} onclick={() => (sidebarOpen = false)}>All Demos</a></li>
+					<li><a href={resolve('/demos/counter')} onclick={() => (sidebarOpen = false)}>Counter</a></li>
+					<li><a href={resolve('/demos/nested-state')} onclick={() => (sidebarOpen = false)}>Nested State</a></li>
+					<li><a href={resolve('/demos/effect-chain')} onclick={() => (sidebarOpen = false)}>Effect Chain</a></li>
+					<li><a href={resolve('/demos/todo-list')} onclick={() => (sidebarOpen = false)}>Todo List</a></li>
+					<li><a href={resolve('/demos/context')} onclick={() => (sidebarOpen = false)}>Context</a></li>
 				</ul>
 			</section>
 		</nav>
