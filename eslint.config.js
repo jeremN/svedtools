@@ -36,6 +36,7 @@ export default ts.config(
   {
     ignores: [
       '**/dist/',
+      '**/build/',
       '**/node_modules/',
       '**/.svelte-kit/',
       'pnpm-lock.yaml',
