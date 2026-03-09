@@ -193,7 +193,7 @@ export function isDevToolsMessage(data: unknown): data is WireMessage {
   return (
     typeof payload === 'object' &&
     payload !== null &&
-    typeof payload.type === 'string' &&
-    VALID_MESSAGE_TYPES.has(payload.type)
+    typeof (payload as Record<string, unknown>).type === 'string' &&
+    VALID_MESSAGE_TYPES.has((payload as Record<string, unknown>).type as string)
   );
 }
