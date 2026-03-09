@@ -8,38 +8,7 @@
  * Also manages the extension badge to indicate Svelte detection.
  */
 
-// Valid message types from the bridge protocol (inlined to avoid chunk imports)
-const VALID_BRIDGE_TYPES = new Set([
-  'component:mounted',
-  'component:unmounted',
-  'component:updated',
-  'component:tree',
-  'state:snapshot',
-  'graph:snapshot',
-  'graph:update',
-  'profiler:data',
-  'trace:update',
-  'bridge:ready',
-]);
-
-const VALID_PANEL_TYPES = new Set([
-  'inspect:component',
-  'state:edit',
-  'profiler:start',
-  'profiler:stop',
-  'graph:request',
-  'highlight:component',
-  'open-in-editor',
-]);
-
-function isValidMessage(message: unknown, validTypes: Set<string>): boolean {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    typeof (message as Record<string, unknown>).type === 'string' &&
-    validTypes.has((message as Record<string, unknown>).type as string)
-  );
-}
+import { isValidMessage, VALID_BRIDGE_TYPES, VALID_PANEL_TYPES } from './service-worker-utils.js';
 
 // Port maps: tabId → port
 const contentPorts = new Map<number, chrome.runtime.Port>();
