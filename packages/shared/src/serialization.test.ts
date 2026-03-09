@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { serialize, serializeAtPath } from './serialization.js';
-import type { SerializedObject, SerializedArray, SerializedDomNode, SerializedCircularRef, SerializedTruncated } from './types.js';
+import type { SerializedObject, SerializedArray, SerializedDomNode, SerializedTruncated } from './types.js';
 
 // -- Primitives --
 
@@ -117,7 +117,10 @@ describe('serialize: arrays', () => {
 
 describe('serialize: collections', () => {
   it('serializes Map', () => {
-    const map = new Map([['a', 1], ['b', 2]]);
+    const map = new Map([
+      ['a', 1],
+      ['b', 2],
+    ]);
     const result = serialize(map) as SerializedObject;
     expect(result.__type).toBe('object');
     expect(result.preview).toContain('Map(2)');
@@ -203,7 +206,9 @@ describe('serialize: Svelte proxy unwrapping', () => {
     const proxy = {
       [Symbol.for('state')]: raw,
       // Proxy might have different enumerable keys
-      get count() { throw new Error('should not be called'); },
+      get count() {
+        throw new Error('should not be called');
+      },
     };
     // The serializer should use the raw object's keys
     const result = serialize(proxy) as SerializedObject;
@@ -217,9 +222,14 @@ describe('serialize: Svelte proxy unwrapping', () => {
 
 describe('serialize: hostile getters', () => {
   it('handles objects that throw on Object.keys', () => {
-    const hostile = new Proxy({}, {
-      ownKeys() { throw new Error('hostile'); },
-    });
+    const hostile = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error('hostile');
+        },
+      },
+    );
     const result = serialize(hostile);
     expect((result as SerializedTruncated).__type).toBe('truncated');
   });
@@ -268,30 +278,38 @@ describe('isDevToolsMessage', () => {
   });
 
   it('accepts valid wire messages', () => {
-    expect(isDevToolsMessage({
-      source: 'svelte-devtools-pro',
-      payload: { type: 'bridge:ready', svelteVersion: '5.0.0', protocolVersion: 1 },
-    })).toBe(true);
+    expect(
+      isDevToolsMessage({
+        source: 'svelte-devtools-pro',
+        payload: { type: 'bridge:ready', svelteVersion: '5.0.0', protocolVersion: 1 },
+      }),
+    ).toBe(true);
   });
 
   it('rejects messages with wrong source', () => {
-    expect(isDevToolsMessage({
-      source: 'other',
-      payload: { type: 'bridge:ready' },
-    })).toBe(false);
+    expect(
+      isDevToolsMessage({
+        source: 'other',
+        payload: { type: 'bridge:ready' },
+      }),
+    ).toBe(false);
   });
 
   it('rejects messages without payload', () => {
-    expect(isDevToolsMessage({
-      source: 'svelte-devtools-pro',
-    })).toBe(false);
+    expect(
+      isDevToolsMessage({
+        source: 'svelte-devtools-pro',
+      }),
+    ).toBe(false);
   });
 
   it('rejects messages with invalid payload type', () => {
-    expect(isDevToolsMessage({
-      source: 'svelte-devtools-pro',
-      payload: { type: 'malicious:injection' },
-    })).toBe(false);
+    expect(
+      isDevToolsMessage({
+        source: 'svelte-devtools-pro',
+        payload: { type: 'malicious:injection' },
+      }),
+    ).toBe(false);
   });
 
   it('rejects non-objects', () => {

@@ -8,27 +8,7 @@
  * Also manages the extension badge to indicate Svelte detection.
  */
 
-// Valid message types from the bridge protocol (inlined to avoid chunk imports)
-const VALID_BRIDGE_TYPES = new Set([
-  'component:mounted', 'component:unmounted', 'component:updated', 'component:tree',
-  'state:snapshot', 'graph:snapshot', 'graph:update',
-  'profiler:data', 'trace:update', 'bridge:ready',
-]);
-
-const VALID_PANEL_TYPES = new Set([
-  'inspect:component', 'state:edit',
-  'profiler:start', 'profiler:stop',
-  'graph:request', 'highlight:component', 'open-in-editor',
-]);
-
-function isValidMessage(message: unknown, validTypes: Set<string>): boolean {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    typeof (message as any).type === 'string' &&
-    validTypes.has((message as any).type)
-  );
-}
+import { isValidMessage, VALID_BRIDGE_TYPES, VALID_PANEL_TYPES } from './service-worker-utils.js';
 
 // Port maps: tabId → port
 const contentPorts = new Map<number, chrome.runtime.Port>();
@@ -93,11 +73,12 @@ chrome.runtime.onConnect.addListener((port) => {
       // First message from panel identifies the tab
       if (message.type === 'panel:init') {
         if (typeof message.tabId !== 'number' || !Number.isFinite(message.tabId)) return;
-        panelTabId = message.tabId;
-        panelPorts.set(panelTabId, port);
+        const initTabId: number = message.tabId;
+        panelTabId = initTabId;
+        panelPorts.set(initTabId, port);
 
         // Replay cached bridge:ready with full version data
-        const svelteInfo = svelteTabs.get(panelTabId);
+        const svelteInfo = svelteTabs.get(initTabId);
         if (svelteInfo) {
           port.postMessage({
             type: 'bridge:ready',

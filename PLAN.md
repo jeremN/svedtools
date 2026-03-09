@@ -5,6 +5,7 @@
 Svelte 5's DevTools story is fundamentally broken. The old `SvelteRegisterComponent` event system was removed and nothing has replaced it ([sveltejs/svelte#11389](https://github.com/sveltejs/svelte/issues/11389)). The official extension doesn't work with Svelte 5 ([sveltejs/svelte-devtools#193](https://github.com/sveltejs/svelte-devtools/issues/193)). Community tools (Sveltick, Svisualize, Svelcro) are either dormant, Svelte 4-only, or don't hook into Svelte internals at all.
 
 We're building a **complete Svelte 5 DevTools suite** — a new standalone project with two parts:
+
 1. **Vite plugin** — compile-time instrumentation injected after `vite-plugin-svelte`
 2. **Chrome extension** — DevTools panel built with Svelte 5 (dogfooding)
 
@@ -14,15 +15,15 @@ Dev-mode only (prod support deferred).
 
 ## Progress
 
-| Phase | Status | Branch |
-|-------|--------|--------|
+| Phase                                        | Status       | Branch                     |
+| -------------------------------------------- | ------------ | -------------------------- |
 | Phase 1: Scaffolding & Shared Infrastructure | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 2: Vite Plugin Core | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 3: Extension Shell | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 4: Component Tree + State Inspection | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 5: Reactivity Graph Visualization | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 6: Performance Profiler | **Complete** | `feat/phase-1-scaffolding` |
-| Phase 7: "Why Did This Update?" Tracing | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 2: Vite Plugin Core                    | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 3: Extension Shell                     | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 4: Component Tree + State Inspection   | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 5: Reactivity Graph Visualization      | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 6: Performance Profiler                | **Complete** | `feat/phase-1-scaffolding` |
+| Phase 7: "Why Did This Update?" Tracing      | **Complete** | `feat/phase-1-scaffolding` |
 
 ---
 
@@ -30,14 +31,14 @@ Dev-mode only (prod support deferred).
 
 ### What Exists Today (and why it's insufficient)
 
-| Tool | Type | Svelte 5? | Hooks into internals? | Status |
-|------|------|-----------|----------------------|--------|
-| [svelte-devtools](https://github.com/sveltejs/svelte-devtools) | Browser extension | No — broken | Yes (Svelte 4 events) | Official, stalled |
-| [Sveltick](https://github.com/Adam014/sveltick) | npm library | Works (framework-agnostic) | No — pure Web Vitals | Active but limited |
-| [Svisualize](https://github.com/oslabs-beta/Svisualize) | VS Code extension | No — misses `$props()` | No — static file parser | Dormant ~2 years |
-| [Svelcro](https://github.com/oslabs-beta/Svelcro) | Browser extension | No — Svelte 4 only | Yes (old event system) | Pre-Svelte 5 |
-| [svelte-grab](https://github.com/HeiCg/svelte-grab) | Runtime library | Yes | Partially (`__svelte_meta` + MutationObserver) | Active |
-| [svelte-runes-devtools](https://github.com/unlocomqx/svelte-runes-devtools) | Redux DevTools bridge | Yes (via `$inspect`) | Via `$inspect().with()` only | Active but narrow |
+| Tool                                                                        | Type                  | Svelte 5?                  | Hooks into internals?                          | Status             |
+| --------------------------------------------------------------------------- | --------------------- | -------------------------- | ---------------------------------------------- | ------------------ |
+| [svelte-devtools](https://github.com/sveltejs/svelte-devtools)              | Browser extension     | No — broken                | Yes (Svelte 4 events)                          | Official, stalled  |
+| [Sveltick](https://github.com/Adam014/sveltick)                             | npm library           | Works (framework-agnostic) | No — pure Web Vitals                           | Active but limited |
+| [Svisualize](https://github.com/oslabs-beta/Svisualize)                     | VS Code extension     | No — misses `$props()`     | No — static file parser                        | Dormant ~2 years   |
+| [Svelcro](https://github.com/oslabs-beta/Svelcro)                           | Browser extension     | No — Svelte 4 only         | Yes (old event system)                         | Pre-Svelte 5       |
+| [svelte-grab](https://github.com/HeiCg/svelte-grab)                         | Runtime library       | Yes                        | Partially (`__svelte_meta` + MutationObserver) | Active             |
+| [svelte-runes-devtools](https://github.com/unlocomqx/svelte-runes-devtools) | Redux DevTools bridge | Yes (via `$inspect`)       | Via `$inspect().with()` only                   | Active but narrow  |
 
 **Key insight**: No tool provides component tree inspection, reactivity graph visualization, performance profiling, OR update tracing for Svelte 5.
 
@@ -47,18 +48,19 @@ Dev-mode only (prod support deferred).
 
 What we can hook into (dev mode only):
 
-| Surface | Access Method | What It Provides |
-|---------|--------------|-------------------|
-| `$.push(props, runes, fn)` / `$.pop()` | Vite post-transform | Component boundary markers — tree building + render timing |
-| `__svelte_meta` on DOM elements | DOM traversal | Source location (file, line, column, parent hierarchy) |
-| `Value.reactions[]` / `Reaction.deps[]` | Runtime graph walk | Bidirectional reactive dependency graph |
-| Dev fields: `label`, `created`, `updated`, `trace` | Signal metadata | Signal names + creation/mutation stack traces |
-| `Effect.ctx`, `Effect.deps`, `Effect.component_function` | Effect internals | Effect-to-component mapping + dependency tracking |
-| `tag()` / `trace()` from `svelte/internal/client/dev/tracing.js` | Import (dev only) | Signal labeling + dependency tracing |
-| `$inspect().with(callback)` | Compiler rune | Reactive value change notifications |
-| Chrome Performance Extensibility API | `console.timeStamp()` | Custom tracks in Performance panel (near-zero overhead) |
+| Surface                                                          | Access Method         | What It Provides                                           |
+| ---------------------------------------------------------------- | --------------------- | ---------------------------------------------------------- |
+| `$.push(props, runes, fn)` / `$.pop()`                           | Vite post-transform   | Component boundary markers — tree building + render timing |
+| `__svelte_meta` on DOM elements                                  | DOM traversal         | Source location (file, line, column, parent hierarchy)     |
+| `Value.reactions[]` / `Reaction.deps[]`                          | Runtime graph walk    | Bidirectional reactive dependency graph                    |
+| Dev fields: `label`, `created`, `updated`, `trace`               | Signal metadata       | Signal names + creation/mutation stack traces              |
+| `Effect.ctx`, `Effect.deps`, `Effect.component_function`         | Effect internals      | Effect-to-component mapping + dependency tracking          |
+| `tag()` / `trace()` from `svelte/internal/client/dev/tracing.js` | Import (dev only)     | Signal labeling + dependency tracing                       |
+| `$inspect().with(callback)`                                      | Compiler rune         | Reactive value change notifications                        |
+| Chrome Performance Extensibility API                             | `console.timeStamp()` | Custom tracks in Performance panel (near-zero overhead)    |
 
 ### What Svelte 5 Removed (vs Svelte 4)
+
 - `SvelteRegisterComponent` / `SvelteUnregisterComponent` events
 - `SvelteRegisterBlock` events
 - `SvelteDOMInsert` / `SvelteDOMRemove` events
@@ -66,13 +68,15 @@ What we can hook into (dev mode only):
 - `capture_state` / `set_state` component methods
 
 ### Key Svelte 5 Internal Types
+
 ```typescript
 // Source signal ($state)
 interface Value<V> {
-  v: V;                          // current value
-  reactions: Reaction[] | null;  // dependents (effects/deriveds)
+  v: V; // current value
+  reactions: Reaction[] | null; // dependents (effects/deriveds)
   equals: (a: V, b: V) => boolean;
-  rv: number; wv: number;       // read/write versions
+  rv: number;
+  wv: number; // read/write versions
   // DEV: label, created, updated, trace
 }
 
@@ -127,6 +131,7 @@ interface Effect extends Reaction {
 ```
 
 ### Reference Architectures Studied
+
 - **React DevTools**: `__REACT_DEVTOOLS_GLOBAL_HOOK__` → fiber tree walking → compact "operations" arrays → lazy element inspection. Profiler defers all computation until recording stops.
 - **Vue DevTools**: `__VUE_DEVTOOLS_GLOBAL_HOOK__` → `setupDevtoolsPlugin` public API → custom inspectors + timeline layers. Rich plugin system.
 - **Chrome Performance Extensibility API**: `console.timeStamp(label, start, end, trackName, trackGroup, color)` for framework-specific tracks in Chrome Performance panel.
@@ -263,20 +268,21 @@ svelte-devtools-pro/
 
 **Review findings addressed:**
 
-| Category | Issue | Resolution |
-|----------|-------|------------|
-| Critical | `isDevToolsMessage` only checked `source` field — any page script could forge messages | Added `payload` validation: must be object with `type` string from whitelist of 17 valid message types |
-| Critical | Prototype pollution via hostile getters in `serializeObject` | Added try/catch around `Object.keys()` and property preview — returns `truncated` on failure |
-| Important | No `serializeAtPath` for lazy child expansion | Added `serializeAtPath(root, path[], opts)` — navigates to target, serializes all children |
-| Important | Extension manifest paths (`src/...`) didn't match build output (`dist/...`) | Changed manifest to use relative paths; added `copyExtensionAssets` Vite plugin |
-| Important | Missing `@types/chrome` | Added to extension devDependencies |
-| Important | `enabled` option was ignored | Now returns `[]` when `false` |
-| Important | `UpdateTrace.id` typed as `string` | Changed to `NodeId` for consistency |
-| Important | No unit tests | 35 tests covering primitives, truncation, depth, circular refs, DOM, proxy unwrap, hostile getters, `serializeAtPath`, `isDevToolsMessage` |
-| Architecture | No protocol version negotiation | Added `protocolVersion` to `BridgeReadyMessage` + `PROTOCOL_VERSION` constant |
-| Architecture | No full tree snapshot for panel reconnection | Added `ComponentTreeSnapshotMessage` (`component:tree`) |
+| Category     | Issue                                                                                  | Resolution                                                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Critical     | `isDevToolsMessage` only checked `source` field — any page script could forge messages | Added `payload` validation: must be object with `type` string from whitelist of 17 valid message types                                     |
+| Critical     | Prototype pollution via hostile getters in `serializeObject`                           | Added try/catch around `Object.keys()` and property preview — returns `truncated` on failure                                               |
+| Important    | No `serializeAtPath` for lazy child expansion                                          | Added `serializeAtPath(root, path[], opts)` — navigates to target, serializes all children                                                 |
+| Important    | Extension manifest paths (`src/...`) didn't match build output (`dist/...`)            | Changed manifest to use relative paths; added `copyExtensionAssets` Vite plugin                                                            |
+| Important    | Missing `@types/chrome`                                                                | Added to extension devDependencies                                                                                                         |
+| Important    | `enabled` option was ignored                                                           | Now returns `[]` when `false`                                                                                                              |
+| Important    | `UpdateTrace.id` typed as `string`                                                     | Changed to `NodeId` for consistency                                                                                                        |
+| Important    | No unit tests                                                                          | 35 tests covering primitives, truncation, depth, circular refs, DOM, proxy unwrap, hostile getters, `serializeAtPath`, `isDevToolsMessage` |
+| Architecture | No protocol version negotiation                                                        | Added `protocolVersion` to `BridgeReadyMessage` + `PROTOCOL_VERSION` constant                                                              |
+| Architecture | No full tree snapshot for panel reconnection                                           | Added `ComponentTreeSnapshotMessage` (`component:tree`)                                                                                    |
 
 **Known limitations (deferred):**
+
 - Service worker chunk-splitting: MV3 service workers can't import from chunks — will address in Phase 3 with self-contained IIFE build
 - `SerializedFunction`/`SerializedSymbol` as distinct types (currently returned as plain strings) — add when panel needs distinct rendering
 - Circular ref `path` field records detection point, not first-seen point (WeakSet, not Map) — acceptable for preview mode
@@ -291,6 +297,7 @@ svelte-devtools-pro/
 **What was built:**
 
 **`transform.ts`** — AST-based post-transform (acorn + estree-walker + magic-string):
+
 - Quick bail check: requires `.push(` + (`svelte/internal/client` OR `svelte_internal_client`)
 - Detects `$` namespace from `ImportNamespaceSpecifier` (supports both original and Vite-resolved import paths)
 - Instruments 6 patterns via comma expressions:
@@ -304,6 +311,7 @@ svelte-devtools-pro/
 - Uses optional chaining (`window.__svelte_devtools__?.onPush(...)`) so instrumented code is safe even if bridge fails
 
 **`runtime-inject.ts`** — Virtual module `virtual:svelte-devtools-bridge`:
+
 - Creates `window.__svelte_devtools__` with 15 API methods
 - Component stack tracking: `onPush()` builds tree with parent-child relationships, `onPop()` computes render duration
 - `removeComponent(id)` — recursive cleanup of component + descendants from maps/arrays (for HMR/unmount)
@@ -319,16 +327,19 @@ svelte-devtools-pro/
 - Emits `bridge:ready` with svelteVersion and protocolVersion
 
 **`index.ts`** — Plugin entry wiring:
+
 - `svelteDevtools(options)` factory returns `[bridgePlugin, transformPlugin]`
 - `bridgePlugin`: `apply: 'serve'`, virtual module resolve/load, `transformIndexHtml` injects `<script src="/@id/__x00__virtual:svelte-devtools-bridge">`, `configureServer` for middleware
 - `transformPlugin`: `enforce: 'post'`, strips query params from ID, skips `type=style`/`type=template` sub-requests
 
 **`middleware.ts`** — Dev server WebSocket:
+
 - `svelte-devtools:open-in-editor` → validates path within project root via `realpath()`, then delegates to Vite's `__open-in-editor`
 - `svelte-devtools:get-source` → same `realpath()` + path boundary validation, reads file, sends content
 - `isWithinRoot()` helper: resolves symlinks to prevent traversal, checks `resolvedPath + '/'` boundary
 
 **E2E verification results (Playwright):**
+
 - Bridge initializes: `window.__svelte_devtools__` present with 15 methods
 - 7 components detected: App, Counter, TodoList, NestedState, EffectChain, ContextPair, ContextChild
 - Correct tree structure: App → 5 children, ContextPair → 1 child (ContextChild)
@@ -339,21 +350,22 @@ svelte-devtools-pro/
 
 **Review findings addressed:**
 
-| Category | Issue | Resolution |
-|----------|-------|------------|
-| Critical | XSS via unescaped component name in string interpolation | Use `JSON.stringify()` for safe string literal in `instrumentPush` |
-| Critical | Double evaluation of `$.set` value expression (side effects run twice) | Moved `onMutation` to AFTER `$.set` completes; pass signal only, bridge reads new value |
-| Critical | `\|\| true` debug leftover forced `console.timeStamp` on every render | Removed — profiling is now properly opt-in via `profilingActive` flag |
-| Important | Memory leak: componentMap/rootComponents/pendingMutations grow unbounded | Added `removeComponent()` with recursive cleanup; capped `pendingMutations` at 1000 |
-| Important | Symlink bypass + path boundary flaw in middleware traversal check | Use `realpath()` to resolve symlinks; check `resolvedPath + '/'` boundary |
-| Important | Missing path validation on `open-in-editor` handler | Added same `isWithinRoot()` check as `get-source` |
-| Important | `$.state()` not instrumented — signalMap always empty | Added `$.tag()` instrumentation: IIFE captures signal, calls `registerSignal(signal, label)` |
-| Important | `postMessage` uses wildcard `'*'` origin | Changed to `window.location.origin` |
-| Important | Transform hook matches style/template sub-requests | Strip query params from ID; skip `type=style` and `type=template` |
-| Suggestion | No error boundary around AST walk/magic-string ops | Wrapped walk+magic-string in try/catch; logs warning and returns null |
-| Suggestion | Profiling arrays (`renderTimings`, `effectTimings`) unbounded | Added `MAX_PROFILING_ENTRIES = 10000` cap with shift eviction |
+| Category   | Issue                                                                    | Resolution                                                                                   |
+| ---------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Critical   | XSS via unescaped component name in string interpolation                 | Use `JSON.stringify()` for safe string literal in `instrumentPush`                           |
+| Critical   | Double evaluation of `$.set` value expression (side effects run twice)   | Moved `onMutation` to AFTER `$.set` completes; pass signal only, bridge reads new value      |
+| Critical   | `\|\| true` debug leftover forced `console.timeStamp` on every render    | Removed — profiling is now properly opt-in via `profilingActive` flag                        |
+| Important  | Memory leak: componentMap/rootComponents/pendingMutations grow unbounded | Added `removeComponent()` with recursive cleanup; capped `pendingMutations` at 1000          |
+| Important  | Symlink bypass + path boundary flaw in middleware traversal check        | Use `realpath()` to resolve symlinks; check `resolvedPath + '/'` boundary                    |
+| Important  | Missing path validation on `open-in-editor` handler                      | Added same `isWithinRoot()` check as `get-source`                                            |
+| Important  | `$.state()` not instrumented — signalMap always empty                    | Added `$.tag()` instrumentation: IIFE captures signal, calls `registerSignal(signal, label)` |
+| Important  | `postMessage` uses wildcard `'*'` origin                                 | Changed to `window.location.origin`                                                          |
+| Important  | Transform hook matches style/template sub-requests                       | Strip query params from ID; skip `type=style` and `type=template`                            |
+| Suggestion | No error boundary around AST walk/magic-string ops                       | Wrapped walk+magic-string in try/catch; logs warning and returns null                        |
+| Suggestion | Profiling arrays (`renderTimings`, `effectTimings`) unbounded            | Added `MAX_PROFILING_ENTRIES = 10000` cap with shift eviction                                |
 
 **Known limitations (deferred):**
+
 - `wrapEffect` in bridge is defined but not yet called by transform — will be wired in Phase 6 when profiling mode is complete
 - Bridge code is a template literal string (no type checking or linting) — accepted tradeoff for simplicity; could extract to separate file at build time
 - `onPop` timing measures from `onPush` to `onPop`, excluding work done inside `$.pop()` itself — intentional, measures component render time not Svelte internals
@@ -368,6 +380,7 @@ svelte-devtools-pro/
 **What was built:**
 
 **`content-script.ts`** — Page↔extension relay:
+
 - Runs in isolated world, listens for `postMessage` from bridge (source: `svelte-devtools-pro`)
 - Lazily connects `chrome.runtime.Port` to service worker on first message
 - Relays messages bidirectionally: page→extension and extension→page
@@ -375,6 +388,7 @@ svelte-devtools-pro/
 - Retry-once pattern for disconnected ports
 
 **`service-worker.ts`** — Tab↔port routing + badge:
+
 - Manages two port maps: `contentPorts` (tabId → port) and `panelPorts` (tabId → port)
 - Message validation: `VALID_BRIDGE_TYPES` and `VALID_PANEL_TYPES` sets checked before forwarding
 - Caches full `bridge:ready` data (`svelteVersion` + `protocolVersion`) in `svelteTabs` Map for late-connecting panels
@@ -383,12 +397,14 @@ svelte-devtools-pro/
 - Cleanup: `tabs.onRemoved` and `tabs.onUpdated` (status: loading) handlers
 
 **`devtools.ts`** — Svelte detection + panel creation:
+
 - Uses `chrome.devtools.inspectedWindow.eval` to check for `__svelte_devtools__` or `__svelte`
 - Polls 10× at 500ms intervals (5s total) for bridge initialization
 - Creates "Svelte" panel via `chrome.devtools.panels.create` once detected
 - Re-detects on `chrome.devtools.network.onNavigated`
 
 **`panel/lib/connection.svelte.ts`** — Reactive Svelte 5 connection module:
+
 - `$state` runes: `connected`, `svelteDetected`, `svelteVersion`, `messages[]`
 - `connect()` — creates port, sends `panel:init` with tabId
 - `send(message)` — forwards `PanelToBridgeMessage` to bridge
@@ -397,16 +413,19 @@ svelte-devtools-pro/
 - Message array: direct `push()` + `splice()` for efficient reactivity (no full copies)
 
 **`panel/App.svelte`** — Updated with status bar:
+
 - Footer showing connection state: red "Disconnected" / yellow "Waiting for Svelte..." / orange "Svelte {version}"
 - Existing tab navigation preserved (Components, Reactivity, Profiler, Tracer)
 
 **`manifest.json`** — MV3 configuration:
+
 - `action` key for badge API, no special permissions needed
 - `devtools_page: "src/devtools.html"` matching build output paths
 - Content script on `<all_urls>` at `document_start`
 - Service worker with `"type": "module"`
 
 **`vite.config.ts`** — Build configuration:
+
 - `base: ''` for relative asset paths (required for Chrome extension context)
 - `modulePreload: false` to eliminate polyfill chunk
 - All entry files self-contained (content-script 0.47KB, devtools 0.44KB, service-worker 1.68KB, panel 35KB)
@@ -415,21 +434,22 @@ svelte-devtools-pro/
 
 **Review findings addressed:**
 
-| Category | Issue | Resolution |
-|----------|-------|------------|
-| Critical | HTML used absolute `/` paths — broken in extension context | Set `base: ''` → relative paths (`../devtools.js`) |
-| Critical | `devtools.js` imported modulepreload polyfill chunk | Set `modulePreload: false` → all entries self-contained |
-| Critical | Content script relayed with wildcard `'*'` origin | Changed to `'/'` (same-origin only) |
-| Critical | No message validation in service worker | Added `VALID_BRIDGE_TYPES` / `VALID_PANEL_TYPES` sets + `isValidMessage()` |
-| Important | `panel:init` tabId not validated | Added `typeof === 'number' && Number.isFinite()` |
-| Important | Cached `bridge:ready` missing version data | Changed `svelteTabs` from Set to Map with full `{svelteVersion, protocolVersion}` |
-| Important | Detection state not reset on disconnect | `handleDisconnect` resets `svelteDetected`, `svelteVersion`, `messages` |
-| Important | Messages array created full copies on each push | Changed to `push()` + `splice()` (Svelte 5 mutation tracking) |
-| Important | `panel:init` missing from protocol types | Added `PanelInitMessage` interface |
-| Important | Unused `activeTab` permission | Removed — no permissions needed |
-| Important | No reconnection on disconnect | Added `scheduleReconnect()` with 1s delay |
+| Category  | Issue                                                      | Resolution                                                                        |
+| --------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Critical  | HTML used absolute `/` paths — broken in extension context | Set `base: ''` → relative paths (`../devtools.js`)                                |
+| Critical  | `devtools.js` imported modulepreload polyfill chunk        | Set `modulePreload: false` → all entries self-contained                           |
+| Critical  | Content script relayed with wildcard `'*'` origin          | Changed to `'/'` (same-origin only)                                               |
+| Critical  | No message validation in service worker                    | Added `VALID_BRIDGE_TYPES` / `VALID_PANEL_TYPES` sets + `isValidMessage()`        |
+| Important | `panel:init` tabId not validated                           | Added `typeof === 'number' && Number.isFinite()`                                  |
+| Important | Cached `bridge:ready` missing version data                 | Changed `svelteTabs` from Set to Map with full `{svelteVersion, protocolVersion}` |
+| Important | Detection state not reset on disconnect                    | `handleDisconnect` resets `svelteDetected`, `svelteVersion`, `messages`           |
+| Important | Messages array created full copies on each push            | Changed to `push()` + `splice()` (Svelte 5 mutation tracking)                     |
+| Important | `panel:init` missing from protocol types                   | Added `PanelInitMessage` interface                                                |
+| Important | Unused `activeTab` permission                              | Removed — no permissions needed                                                   |
+| Important | No reconnection on disconnect                              | Added `scheduleReconnect()` with 1s delay                                         |
 
 **Known limitations (deferred):**
+
 - No icon files yet — manifest references icons but `icons/` directory is empty; add when creating extension assets
 - Detection polling capped at 5s — very slow Svelte apps may be missed; could improve by listening for `bridge:ready` via port instead
 - Content script connects eagerly on any matching postMessage — acceptable for dev tool, Chrome cleans up on tab close
@@ -443,6 +463,7 @@ svelte-devtools-pro/
 **What was built:**
 
 **`panel/lib/components.svelte.ts`** — Reactive component store:
+
 - `$state` Record for component map (not Map, for Svelte 5 reactivity)
 - `processMessage()` handles 5 message types: `component:mounted`, `component:unmounted`, `component:updated`, `component:tree`, `state:snapshot`
 - Recursive `removeRecursive(id)` for unmount cleanup — prevents orphaned children on out-of-order messages
@@ -452,6 +473,7 @@ svelte-devtools-pro/
 - Exported accessors: `getComponentMap()`, `getRootIds()`, `getSelectedId()`, `getSearchFilter()`, `getStateSnapshot()`
 
 **`panel/components/ComponentTree.svelte`** — Collapsible tree UI:
+
 - Recursive `{#snippet treeNode(id, depth)}` with `{@render}` (no `svelte:self`)
 - Expand/collapse chevrons stored in `$state` Record (default expanded)
 - Component name in Svelte orange (#e8ab6a), basename filename in muted gray
@@ -462,6 +484,7 @@ svelte-devtools-pro/
 - Accessibility: `role="tree"/"treeitem"`, `aria-selected`, `aria-expanded`, keyboard (Enter/Space)
 
 **`panel/components/StateInspector.svelte`** — State inspector panel:
+
 - Shows selected component name or "Select a component" placeholder
 - Signal list with type badges: `$state` (green), `$derived` (yellow), `$props` (blue)
 - `{#snippet valueDisplay(value, depth)}` handles all `SerializedValue` variants:
@@ -470,19 +493,23 @@ svelte-devtools-pro/
 - Empty states for no selection and no reactive state
 
 **`panel/App.svelte`** — Updated Components tab:
+
 - Split-pane layout: search bar + ComponentTree (left) | StateInspector (right)
 - Pane divider, both panes scrollable independently
 - Other tabs retain padding via inline style wrappers
 
 **`panel/lib/connection.svelte.ts`** — Enhanced with subscribers:
+
 - `onMessage(listener)` — returns unsubscribe function, iterates `[...listeners]` copy for mutation safety
 - `onDisconnect(listener)` — fires when port disconnects (for state reset)
 
 **`panel/main.ts`** — Wiring:
+
 - `onMessage(processMessage)` — routes bridge messages to component store
 - `onDisconnect(resetState)` — clears stale data on reconnect
 
 **`runtime-inject.ts`** — Bridge inspect + highlight handlers:
+
 - `inspect:component`: walks `signalMap` for signals owned by selected component, reads `signal.v` (untracked reactive read, documented), serializes via inline `safeSerialize()`, emits `state:snapshot`
 - `registerSignal()` now tracks `signalType` ('state' | 'derived' | 'props') as 4th parameter
 - Inline `safeSerialize()` / `previewVal()`: handles primitives, bigint, symbol, Date, RegExp, Error, arrays, objects, DOM nodes, circular refs, Svelte Proxy unwrap — simplified version of shared serializer for page context
@@ -492,21 +519,22 @@ svelte-devtools-pro/
 
 **Review findings addressed:**
 
-| Category | Issue | Resolution |
-|----------|-------|------------|
-| Critical | Unmount doesn't recursively clean children — orphaned nodes on out-of-order messages | Added `removeRecursive(id)` that deletes node + all descendants |
-| Important | `component:updated` from `onMutation` overwrites `renderDuration` with 0 | Only update when `message.renderDuration > 0` |
-| Important | `findDomElements` had dead `data-svelte-component-id` branch (never set) + unbounded DOM walk | Removed dead branch, added 10k element limit + 500ms cache |
-| Important | Filename matching by basename only — false matches for same-named components in different dirs | Full path match first, basename fallback only |
-| Important | Highlight overlay never cleaned up | Cache with TTL; overlay hidden when `id: null` sent |
-| Important | `onMessage` listeners not cleared on reconnect — stale component data | Added `onDisconnect()` subscriber, `main.ts` calls `resetState()` |
-| Important | Listener array mutated during iteration | Iterate `[...listeners]` copy |
-| Important | `component:tree` trusts children arrays — broken refs if IDs missing | Added validation pass filtering children to existing IDs |
-| Important | Inline serializer missing Date/RegExp/Error/bigint/symbol handling | Added handling matching shared serializer coverage |
-| Suggestion | Unused `getMessages` import in components.svelte.ts | Removed |
-| Suggestion | `signal.v` read is untracked reactive access | Added comment documenting design choice |
+| Category   | Issue                                                                                          | Resolution                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Critical   | Unmount doesn't recursively clean children — orphaned nodes on out-of-order messages           | Added `removeRecursive(id)` that deletes node + all descendants   |
+| Important  | `component:updated` from `onMutation` overwrites `renderDuration` with 0                       | Only update when `message.renderDuration > 0`                     |
+| Important  | `findDomElements` had dead `data-svelte-component-id` branch (never set) + unbounded DOM walk  | Removed dead branch, added 10k element limit + 500ms cache        |
+| Important  | Filename matching by basename only — false matches for same-named components in different dirs | Full path match first, basename fallback only                     |
+| Important  | Highlight overlay never cleaned up                                                             | Cache with TTL; overlay hidden when `id: null` sent               |
+| Important  | `onMessage` listeners not cleared on reconnect — stale component data                          | Added `onDisconnect()` subscriber, `main.ts` calls `resetState()` |
+| Important  | Listener array mutated during iteration                                                        | Iterate `[...listeners]` copy                                     |
+| Important  | `component:tree` trusts children arrays — broken refs if IDs missing                           | Added validation pass filtering children to existing IDs          |
+| Important  | Inline serializer missing Date/RegExp/Error/bigint/symbol handling                             | Added handling matching shared serializer coverage                |
+| Suggestion | Unused `getMessages` import in components.svelte.ts                                            | Removed                                                           |
+| Suggestion | `signal.v` read is untracked reactive access                                                   | Added comment documenting design choice                           |
 
 **Known limitations (deferred):**
+
 - State editing (`$.set(signal, newValue)`) — protocol message exists but bridge handler not implemented
 - Lazy expansion of dehydrated objects/arrays — inline serializer omits `path` field
 - HMR tree rebuild — no listener for Vite HMR invalidation events
@@ -525,6 +553,7 @@ svelte-devtools-pro/
 **What was built:**
 
 **Bridge `buildGraph(filterComponentId)`** — in `runtime-inject.ts`:
+
 - Walks all registered signals in `signalMap`
 - For each signal, traverses `signal.reactions[]` to find dependent deriveds and effects
 - Type detection: `!('teardown' in reaction)` — deriveds lack `teardown`, effects have it (matches Svelte 5 internals)
@@ -536,6 +565,7 @@ svelte-devtools-pro/
 - `graph:request` message handler emits `graph:snapshot` with complete `{ nodes, edges }`
 
 **`panel/lib/graph.svelte.ts`** — Reactive graph store:
+
 - `$state` arrays for `graphNodes` and `graphEdges`
 - `processGraphMessage()` handles `graph:snapshot` (full replace) and `graph:update` (merge by ID with composite edge key)
 - Selection state: `selectedNodeId`, `selectGraphNode()`
@@ -544,6 +574,7 @@ svelte-devtools-pro/
 - Wired into `main.ts` via `onMessage(processGraphMessage)` + `onDisconnect(resetGraphState)`
 
 **`panel/components/ReactivityGraph.svelte`** — D3 force-directed SVG visualization:
+
 - D3 simulation via `$effect` watching `graphNodes`/`graphEdges` — creates `forceSimulation` with link, charge (-200), center, and collide (30) forces
 - Position preservation: carries forward existing node positions across rebuilds; uses lower alpha (0.3) for gentle adjustments
 - Tick throttling: only triggers Svelte reactivity every 3rd tick, reducing DOM reconciliation from ~300 to ~100 per layout
@@ -561,18 +592,19 @@ svelte-devtools-pro/
 
 **Review findings addressed:**
 
-| Category | Issue | Resolution |
-|----------|-------|------------|
-| Critical | Dangling edges when component filter active — edges added for filtered-out nodes | Track `addedNodeIds` set; only add edge when both endpoints present |
-| Critical | Derived vs effect detection unreliable (`reaction.reactions !== undefined`) | Changed to `!('teardown' in reaction)` — effects have teardown, deriveds don't |
-| Critical | `genId()` creates new IDs for same reactions across `buildGraph()` calls | Added `stableReactionIds` Map at bridge scope — persists across calls |
-| Important | Simulation recreated from scratch losing node positions | Preserve positions via `oldPositions` Map; use lower alpha for existing layouts |
-| Important | Tick handler creates new arrays on every frame (~300 DOM reconciliations) | Throttle to every 3rd tick or at final settling |
-| Important | Tooltip `position: absolute` misaligned with `clientX/clientY` | Changed to `position: fixed` |
-| Important | Unused `d3-selection` dependency | Removed |
-| Important | `graph:update` merge doesn't remove stale edges | Documented as additive-only; full refresh via `graph:request` |
+| Category  | Issue                                                                            | Resolution                                                                      |
+| --------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Critical  | Dangling edges when component filter active — edges added for filtered-out nodes | Track `addedNodeIds` set; only add edge when both endpoints present             |
+| Critical  | Derived vs effect detection unreliable (`reaction.reactions !== undefined`)      | Changed to `!('teardown' in reaction)` — effects have teardown, deriveds don't  |
+| Critical  | `genId()` creates new IDs for same reactions across `buildGraph()` calls         | Added `stableReactionIds` Map at bridge scope — persists across calls           |
+| Important | Simulation recreated from scratch losing node positions                          | Preserve positions via `oldPositions` Map; use lower alpha for existing layouts |
+| Important | Tick handler creates new arrays on every frame (~300 DOM reconciliations)        | Throttle to every 3rd tick or at final settling                                 |
+| Important | Tooltip `position: absolute` misaligned with `clientX/clientY`                   | Changed to `position: fixed`                                                    |
+| Important | Unused `d3-selection` dependency                                                 | Removed                                                                         |
+| Important | `graph:update` merge doesn't remove stale edges                                  | Documented as additive-only; full refresh via `graph:request`                   |
 
 **Known limitations (deferred):**
+
 - No live push updates / flash animation on signal change — currently request/response only
 - No minimap for navigation
 - No `graph-layout.ts` extraction (all layout logic in component)
@@ -586,12 +618,14 @@ svelte-devtools-pro/
 **Goal**: Record and visualize component render times and effect execution.
 
 **Data Collection (opt-in):**
+
 - Panel "Start Profiling" → message → bridge sets `profilingActive = true`
 - Component renders: timing from push/pop wrapping (already captured)
 - Effect execution: wrap effect functions with `performance.now()` timing
 - Track render count per component
 
 **Chrome Performance Integration:**
+
 - `console.timeStamp(label, start, end, trackName, trackGroup, color)`:
   - Track group: "Svelte DevTools Pro"
   - Track "Component Renders": entries per component render (color: primary)
@@ -599,6 +633,7 @@ svelte-devtools-pro/
 - `chrome.devtools.performance.onProfilingStarted` → activate bridge profiling lazily
 
 **Panel Profiler (`Profiler.svelte`):**
+
 - Start/Stop recording button
 - Flamegraph: nested component renders by parent-child, colored by self-time
 - Component table: name, render count, total time, avg time, self time, sorted by total
@@ -611,20 +646,24 @@ svelte-devtools-pro/
 **Goal**: Click any update and see the full causal chain from source mutation to DOM change.
 
 **Mutation Capture (bridge):**
+
 - Wrap `$.set()` calls: record signal label, component, stack trace, timestamp
 - Queue in `pendingMutations[]`
 
 **Chain Building:**
+
 - When effects re-run: check `Effect.deps[]` for dirty signals (wv changed since last known)
 - Record: which deps were dirty, old value vs new value
 - Build chain: Source mutation → dirty reactions → effect execution
 - Leverage dev-mode `created`/`updated` Error stack traces for precise locations
 
 **DOM Correlation:**
+
 - `MutationObserver` on `document.body` (childList, subtree, attributes, characterData)
 - Correlate DOM mutations with current update chain (same microtask batch)
 
 **Panel UI (`UpdateTracer.svelte`):**
+
 - Timeline of update events (newest first)
 - Each entry shows: signal name → N effects re-ran → M DOM updates
 - Click to expand:
@@ -637,16 +676,16 @@ svelte-devtools-pro/
 
 ## Key Technical Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Transform approach | AST (acorn + estree-walker) | Regex is fragile; AST reliably finds `$.push` etc. |
-| Bridge injection | Vite virtual module | Clean, auto-removed in prod, no manual setup |
-| Graph visualization | D3 force-directed | Battle-tested, handles large graphs, interactive |
-| Profiling overhead | Opt-in via panel toggle | Base tree instrumentation is lightweight; profiling adds timing |
+| Decision              | Choice                                  | Rationale                                                            |
+| --------------------- | --------------------------------------- | -------------------------------------------------------------------- |
+| Transform approach    | AST (acorn + estree-walker)             | Regex is fragile; AST reliably finds `$.push` etc.                   |
+| Bridge injection      | Vite virtual module                     | Clean, auto-removed in prod, no manual setup                         |
+| Graph visualization   | D3 force-directed                       | Battle-tested, handles large graphs, interactive                     |
+| Profiling overhead    | Opt-in via panel toggle                 | Base tree instrumentation is lightweight; profiling adds timing      |
 | Svelte version compat | Abstraction layer + `window.__svelte.v` | Private APIs may change; version-specific accessors isolate breakage |
-| Panel framework | Svelte 5 | Dogfooding, proves the ecosystem |
-| Performance API | `console.timeStamp` | Near-zero overhead (no timeline entries when DevTools closed) |
-| Serialization | Lazy/dehydrated | Large reactive state trees need progressive loading |
+| Panel framework       | Svelte 5                                | Dogfooding, proves the ecosystem                                     |
+| Performance API       | `console.timeStamp`                     | Near-zero overhead (no timeline entries when DevTools closed)        |
+| Serialization         | Lazy/dehydrated                         | Large reactive state trees need progressive loading                  |
 
 ---
 
@@ -675,26 +714,27 @@ Test against: Svelte 5.0, 5.10, 5.20, 5.37+ in CI matrix.
 
 ## Testing & Verification
 
-| Level | Tool | What | Status |
-|-------|------|------|--------|
-| Unit | Vitest | Serialization edge cases, protocol validation, type guards | ✅ 35 tests passing |
-| Unit | Vitest | Transform correctness (fixture files, 6 instrumentation patterns) | ✅ 10 tests passing |
-| Integration | Playwright | Load playground + plugin, verify bridge, tree, names, timings | ✅ Manual E2E verified |
-| Extension E2E | Puppeteer `--load-extension` | Full panel lifecycle: tree renders, graph shows, profiler records | Phase 4+ |
-| Compatibility | CI matrix | Svelte 5.0, 5.10, 5.20, 5.37+ | Phase 3+ |
-| Playground | Manual | Counter, TodoList, NestedState, EffectChain, ContextPair, ContextChild | ✅ All components built + instrumented |
+| Level         | Tool                         | What                                                                   | Status                                 |
+| ------------- | ---------------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| Unit          | Vitest                       | Serialization edge cases, protocol validation, type guards             | ✅ 35 tests passing                    |
+| Unit          | Vitest                       | Transform correctness (fixture files, 6 instrumentation patterns)      | ✅ 10 tests passing                    |
+| Integration   | Playwright                   | Load playground + plugin, verify bridge, tree, names, timings          | ✅ Manual E2E verified                 |
+| Extension E2E | Puppeteer `--load-extension` | Full panel lifecycle: tree renders, graph shows, profiler records      | Phase 4+                               |
+| Compatibility | CI matrix                    | Svelte 5.0, 5.10, 5.20, 5.37+                                          | Phase 3+                               |
+| Playground    | Manual                       | Counter, TodoList, NestedState, EffectChain, ContextPair, ContextChild | ✅ All components built + instrumented |
 
 ---
 
 ## Distribution
 
-| Target | Package | Deps |
-|--------|---------|------|
-| npm | `vite-plugin-svelte-devtools` | Peer: `vite ^5\|\|^6`, `svelte ^5` |
-| Chrome Web Store | Svelte DevTools Pro | — |
-| GitHub Actions | On tag push | Build → npm publish + Chrome Web Store upload |
+| Target           | Package                       | Deps                                          |
+| ---------------- | ----------------------------- | --------------------------------------------- |
+| npm              | `vite-plugin-svelte-devtools` | Peer: `vite ^5\|\|^6`, `svelte ^5`            |
+| Chrome Web Store | Svelte DevTools Pro           | —                                             |
+| GitHub Actions   | On tag push                   | Build → npm publish + Chrome Web Store upload |
 
 **Usage:**
+
 ```typescript
 // vite.config.ts
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -703,8 +743,8 @@ import { svelteDevtools } from 'vite-plugin-svelte-devtools';
 export default defineConfig({
   plugins: [
     svelte(),
-    svelteDevtools()  // Add after svelte()
-  ]
+    svelteDevtools(), // Add after svelte()
+  ],
 });
 ```
 
@@ -713,10 +753,12 @@ export default defineConfig({
 ## Phase 6: Performance Profiler — Completion Notes
 
 **Files created:**
+
 - `packages/extension/src/panel/lib/profiler.svelte.ts` — Reactive profiler store with session tokens, aggregation functions
 - `packages/extension/src/panel/components/Profiler.svelte` — Profiler UI with start/stop toggle, elapsed timer, component & effect tables
 
 **Files modified:**
+
 - `packages/vite-plugin/src/transform.ts` — `instrumentUserEffect` now wraps effect functions through `wrapEffect` for timing instrumentation
 - `packages/vite-plugin/src/runtime-inject.ts` — `wrapEffect` uses lazy reaction lookup for accurate `depsCount`, effect timings match protocol shape
 - `packages/extension/src/panel/main.ts` — Added `processProfilerMessage` + `resetProfilerState` routing
@@ -724,6 +766,7 @@ export default defineConfig({
 - `packages/shared/src/protocol.ts` — `ProfilerDataMessage` with `effectTimings` array
 
 **Review fixes applied:**
+
 - Critical: `depsCount` now reads actual `reaction.deps.length` via lazy cached lookup (was `fn.length`)
 - Critical: Session token + `pendingStopToken` prevents race condition on stop-then-start cycles
 - Critical: Transform now generates IIFE that calls both `registerEffect` AND `wrapEffect` (was missing `wrapEffect`)
@@ -736,10 +779,12 @@ export default defineConfig({
 ## Phase 7: "Why Did This Update?" Tracing — Completion Notes
 
 **Files created:**
+
 - `packages/extension/src/panel/lib/tracer.svelte.ts` — Reactive trace store with ring buffer of 200 entries
 - `packages/extension/src/panel/components/UpdateTracer.svelte` — Timeline UI with expandable trace detail view
 
 **Files modified:**
+
 - `packages/vite-plugin/src/transform.ts` — $.set now calls `preMutation` before and `onMutation` after; $.update uses IIFE pattern to preserve return value while capturing both
 - `packages/vite-plugin/src/runtime-inject.ts` — Added preMutation/preCapture, enhanced onMutation with stack traces and old/new value capture, MutationObserver for DOM changes, buildChainFromSignal for reactive graph walking, queueMicrotask-based trace flush
 - `packages/shared/src/types.ts` — Added `oldValue`/`newValue` to `UpdateTrace.rootCause`
@@ -747,12 +792,14 @@ export default defineConfig({
 - `packages/extension/src/panel/App.svelte` — Replaced Tracer placeholder with `<UpdateTracer />`
 
 **Architecture decisions:**
+
 - Always-on tracing (no start/stop toggle) — captures every mutation when DevTools panel is connected
 - Microtask batching — mutations in the same synchronous cycle are grouped into a single flush
 - DOM mutations attributed to the entire batch (per-signal attribution would require Svelte-internal integration)
 - Chain building walks the reactive graph from the mutated signal through its reactions
 
 **Review fixes applied:**
+
 - Switched trace timestamps from `performance.now()` to `Date.now()` for correct cross-context display
 - Switched `preCapture` to `WeakMap` to prevent memory leaks on orphaned signals
 - Forwarded `oldValue`/`newValue` through rootCause to panel (core "Why?" diagnostic info)

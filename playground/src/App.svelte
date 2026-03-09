@@ -49,5 +49,8 @@
     border: 1px solid #ddd;
     border-radius: 8px;
   }
-  h2 { margin-top: 0; color: #ff3e00; }
+  h2 {
+    margin-top: 0;
+    color: #ff3e00;
+  }
 </style>

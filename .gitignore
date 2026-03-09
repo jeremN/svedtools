@@ -1,7 +1,11 @@
 node_modules/
 dist/
+build/
 .svelte-kit/
 .vite/
 *.local
 .DS_Store
 .playwright-mcp/
+test-results/
+playwright-report/
+blob-report/

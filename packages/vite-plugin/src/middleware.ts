@@ -34,11 +34,19 @@ export function createDevtoolsMiddleware(server: ViteDevServer): void {
 
     // Vite exposes __open-in-editor via middleware
     const url = `/__open-in-editor?file=${encodeURIComponent(file)}&line=${line}&column=${column}`;
-    server.middlewares.handle(
-      { url, method: 'GET', headers: {} } as any,
-      { end() {}, writeHead() { return this; }, setHeader() { return this; } } as any,
-      () => {},
-    );
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const req = { url, method: 'GET', headers: {} } as any;
+    const res = {
+      end() {},
+      writeHead() {
+        return this;
+      },
+      setHeader() {
+        return this;
+      },
+    } as any;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    server.middlewares.handle(req, res, () => {});
   });
 
   server.ws.on('svelte-devtools:get-source', async (data: { file: string }, client) => {

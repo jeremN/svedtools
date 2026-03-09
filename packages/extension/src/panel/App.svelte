@@ -8,7 +8,7 @@
   import { getSearchFilter, setSearchFilter } from './lib/components.svelte.js';
 
   const tabs = ['Components', 'Reactivity', 'Profiler', 'Tracer'] as const;
-  type Tab = typeof tabs[number];
+  type Tab = (typeof tabs)[number];
   let activeTab: Tab = $state('Components');
 
   let connected = $derived(getConnected());
@@ -20,11 +20,7 @@
 <div class="devtools">
   <nav class="tabs">
     {#each tabs as tab (tab)}
-      <button
-        class="tab"
-        class:active={activeTab === tab}
-        onclick={() => activeTab = tab}
-      >
+      <button class="tab" class:active={activeTab === tab} onclick={() => (activeTab = tab)}>
         {tab}
       </button>
     {/each}
@@ -96,7 +92,9 @@
     font-size: 13px;
     border-bottom: 2px solid transparent;
   }
-  .tab:hover { color: #ccc; }
+  .tab:hover {
+    color: #ccc;
+  }
   .tab.active {
     color: #ff3e00;
     border-bottom-color: #ff3e00;
@@ -121,12 +119,24 @@
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .status-dot.disconnected { background: #e54545; }
-  .status-dot.waiting { background: #cca700; }
-  .status-dot.detected { background: #ff3e00; }
-  .status-text.disconnected { color: #e54545; }
-  .status-text.waiting { color: #cca700; }
-  .status-text.detected { color: #ff3e00; }
+  .status-dot.disconnected {
+    background: #e54545;
+  }
+  .status-dot.waiting {
+    background: #cca700;
+  }
+  .status-dot.detected {
+    background: #ff3e00;
+  }
+  .status-text.disconnected {
+    color: #e54545;
+  }
+  .status-text.waiting {
+    color: #cca700;
+  }
+  .status-text.detected {
+    color: #ff3e00;
+  }
   .components-layout {
     display: flex;
     flex-direction: column;

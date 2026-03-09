@@ -24,13 +24,14 @@ interface TransformResult {
  * - $.set(signal, value)               → mutation tracking
  * - $.update(signal)                   → mutation tracking
  */
-export function transformSvelteOutput(
-  code: string,
-  id: string,
-): TransformResult | null {
+export function transformSvelteOutput(code: string, id: string): TransformResult | null {
   // Quick bail: must have a push call from svelte internals
   // Check both Vite-resolved path (svelte_internal_client) and original import (svelte/internal/client)
-  if (!code.includes('.push(') || (!code.includes('svelte_internal_client') && !code.includes('svelte/internal/client'))) return null;
+  if (
+    !code.includes('.push(') ||
+    (!code.includes('svelte_internal_client') && !code.includes('svelte/internal/client'))
+  )
+    return null;
 
   let ast: Node;
   try {
@@ -53,11 +54,13 @@ export function transformSvelteOutput(
     let dollarSign = '$';
 
     walk(ast, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       enter(node: any) {
         // Detect the namespace import: import * as $ from "svelte/internal/client"
         if (
           node.type === 'ImportDeclaration' &&
-          (node.source?.value?.includes('svelte_internal_client') || node.source?.value?.includes('svelte/internal/client')) &&
+          (node.source?.value?.includes('svelte_internal_client') ||
+            node.source?.value?.includes('svelte/internal/client')) &&
           node.specifiers?.length === 1 &&
           node.specifiers[0].type === 'ImportNamespaceSpecifier'
         ) {
@@ -89,7 +92,7 @@ export function transformSvelteOutput(
             break;
 
           case 'user_effect':
-            instrumentUserEffect(s, node, dollarSign);
+            instrumentUserEffect(s, node);
             hasChanges = true;
             break;
 
@@ -135,6 +138,7 @@ export function transformSvelteOutput(
  * reassigns the component identifier to a wrapper function at runtime.
  * Baking the name at compile time avoids reading wrapper.name = "wrapper".
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentPush(s: MagicString, node: any): void {
   const args = node.arguments;
   if (args.length < 3) return;
@@ -148,10 +152,7 @@ function instrumentPush(s: MagicString, node: any): void {
   const fnArg = s.slice(args[2].start, args[2].end);
 
   // Wrap the entire $.push call in a comma expression
-  s.prependLeft(
-    node.start,
-    `(window.__svelte_devtools__?.onPush(${safeName}, ${propsArg}, ${fnArg}), `,
-  );
+  s.prependLeft(node.start, `(window.__svelte_devtools__?.onPush(${safeName}, ${propsArg}, ${fnArg}), `);
   s.appendRight(node.end, ')');
 }
 
@@ -161,11 +162,9 @@ function instrumentPush(s: MagicString, node: any): void {
  *
  * Insert onPop before pop runs so we capture render duration.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentPop(s: MagicString, node: any): void {
-  s.prependLeft(
-    node.start,
-    `(window.__svelte_devtools__?.onPop(), `,
-  );
+  s.prependLeft(node.start, `(window.__svelte_devtools__?.onPop(), `);
   s.appendRight(node.end, ')');
 }
 
@@ -177,17 +176,15 @@ function instrumentPop(s: MagicString, node: any): void {
  * wrapEffect returns the original fn when profiling is inactive,
  * or a timing-instrumented wrapper when profiling is active.
  */
-function instrumentUserEffect(s: MagicString, node: any, dollar: string): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function instrumentUserEffect(s: MagicString, node: any): void {
   const args = node.arguments;
   if (args.length < 1) return;
 
   // Wrap the fn argument with an IIFE that registers + wraps for profiling.
   // Uses prependLeft/appendRight (additive) rather than overwrite to avoid
   // conflicts with inner instrumentation (e.g. $.set inside the effect body).
-  s.prependLeft(
-    args[0].start,
-    `(() => { const __fn = `,
-  );
+  s.prependLeft(args[0].start, `(() => { const __fn = `);
   s.appendRight(
     args[0].end,
     `; const __eid = window.__svelte_devtools__?.registerEffect(__fn); return window.__svelte_devtools__?.wrapEffect(__fn, __eid) ?? __fn; })()`,
@@ -202,6 +199,7 @@ function instrumentUserEffect(s: MagicString, node: any, dollar: string): void {
  * onMutation is called AFTER set to read the new value from the signal.
  * This enables "Why Did This Update?" tracing by comparing old vs new.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentSet(s: MagicString, node: any): void {
   const args = node.arguments;
   if (args.length < 2) return;
@@ -220,6 +218,7 @@ function instrumentSet(s: MagicString, node: any): void {
  * IIFE preserves $.update's return value (used in `return $.update(count, -1)`)
  * while capturing pre/post mutation values for update tracing.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentUpdate(s: MagicString, node: any): void {
   const args = node.arguments;
   if (args.length < 1) return;
@@ -227,14 +226,8 @@ function instrumentUpdate(s: MagicString, node: any): void {
   const signalArg = s.slice(args[0].start, args[0].end);
 
   // IIFE preserves $.update return value while capturing pre/post mutation
-  s.prependLeft(
-    node.start,
-    `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `,
-  );
-  s.appendRight(
-    node.end,
-    `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`,
-  );
+  s.prependLeft(node.start, `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `);
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`);
 }
 
 /**
@@ -245,6 +238,7 @@ function instrumentUpdate(s: MagicString, node: any): void {
  * Simpler: wrap as an IIFE that captures the result:
  * → (() => { const __s = $.tag($.state(0), 'count'); window.__svelte_devtools__?.registerSignal(__s, 'count'); return __s; })()
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentTag(s: MagicString, node: any): void {
   const args = node.arguments;
   // $.tag(signal, label) — must have at least 2 args
@@ -256,12 +250,6 @@ function instrumentTag(s: MagicString, node: any): void {
 
   const label = JSON.stringify(labelNode.value);
 
-  s.prependLeft(
-    node.start,
-    `(() => { const __s = `,
-  );
-  s.appendRight(
-    node.end,
-    `; window.__svelte_devtools__?.registerSignal(__s, ${label}); return __s; })()`,
-  );
+  s.prependLeft(node.start, `(() => { const __s = `);
+  s.appendRight(node.end, `; window.__svelte_devtools__?.registerSignal(__s, ${label}); return __s; })()`);
 }

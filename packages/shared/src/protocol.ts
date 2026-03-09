@@ -160,10 +160,18 @@ export interface WireMessage<T = BridgeToPanelMessage | PanelToBridgeMessage> {
 
 /** All valid message type discriminants */
 const VALID_MESSAGE_TYPES = new Set([
-  'component:mounted', 'component:unmounted', 'component:updated', 'component:tree',
-  'state:snapshot', 'state:edit',
-  'graph:snapshot', 'graph:update', 'graph:request',
-  'profiler:start', 'profiler:stop', 'profiler:data',
+  'component:mounted',
+  'component:unmounted',
+  'component:updated',
+  'component:tree',
+  'state:snapshot',
+  'state:edit',
+  'graph:snapshot',
+  'graph:update',
+  'graph:request',
+  'profiler:start',
+  'profiler:stop',
+  'profiler:data',
   'trace:update',
   'bridge:ready',
   'inspect:component',
@@ -177,15 +185,15 @@ export function isDevToolsMessage(data: unknown): data is WireMessage {
     typeof data !== 'object' ||
     data === null ||
     !('source' in data) ||
-    (data as any).source !== 'svelte-devtools-pro'
+    (data as Record<string, unknown>).source !== 'svelte-devtools-pro'
   ) {
     return false;
   }
-  const payload = (data as any).payload;
+  const payload = (data as Record<string, unknown>).payload;
   return (
     typeof payload === 'object' &&
     payload !== null &&
-    typeof payload.type === 'string' &&
-    VALID_MESSAGE_TYPES.has(payload.type)
+    typeof (payload as Record<string, unknown>).type === 'string' &&
+    VALID_MESSAGE_TYPES.has((payload as Record<string, unknown>).type as string)
   );
 }

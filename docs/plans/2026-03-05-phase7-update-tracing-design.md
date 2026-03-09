@@ -53,9 +53,12 @@ const observer = new MutationObserver((mutations) => {
   }
 });
 observer.observe(document.body, {
-  childList: true, subtree: true,
-  attributes: true, characterData: true,
-  attributeOldValue: true, characterDataOldValue: true,
+  childList: true,
+  subtree: true,
+  attributes: true,
+  characterData: true,
+  attributeOldValue: true,
+  characterDataOldValue: true,
 });
 ```
 
@@ -73,6 +76,7 @@ When an effect re-runs, inspect its dirty dependencies:
 ### 4. Emit Traces via Microtask
 
 After a mutation, use `queueMicrotask` to batch:
+
 1. Collect pending mutations from this tick
 2. Collect effect chain steps built during this tick
 3. Drain DOM mutation queue
@@ -110,11 +114,11 @@ $.set(count, 5)
 
 ## Files Changed
 
-| File | Action |
-|------|--------|
-| `runtime-inject.ts` | Enhance onMutation, add MutationObserver, chain building, trace emission |
-| `transform.ts` | Adjust $.set instrumentation to capture pre-mutation value |
-| `tracer.svelte.ts` | Create: trace store with ring buffer |
-| `UpdateTracer.svelte` | Create: tracer UI component |
-| `main.ts` (panel) | Wire processTraceMessage + resetTracerState |
-| `App.svelte` | Replace Tracer placeholder with UpdateTracer |
+| File                  | Action                                                                   |
+| --------------------- | ------------------------------------------------------------------------ |
+| `runtime-inject.ts`   | Enhance onMutation, add MutationObserver, chain building, trace emission |
+| `transform.ts`        | Adjust $.set instrumentation to capture pre-mutation value               |
+| `tracer.svelte.ts`    | Create: trace store with ring buffer                                     |
+| `UpdateTracer.svelte` | Create: tracer UI component                                              |
+| `main.ts` (panel)     | Wire processTraceMessage + resetTracerState                              |
+| `App.svelte`          | Replace Tracer placeholder with UpdateTracer                             |
