@@ -13,6 +13,7 @@
 ## Task 1: ESLint + Prettier Setup
 
 **Files:**
+
 - Create: `eslint.config.js`
 - Create: `.prettierrc`
 - Create: `.prettierignore`
@@ -65,13 +66,7 @@ export default ts.config(
     },
   },
   {
-    ignores: [
-      'dist/',
-      'node_modules/',
-      '.svelte-kit/',
-      'pnpm-lock.yaml',
-      'packages/vite-plugin/src/runtime-inject.ts',
-    ],
+    ignores: ['dist/', 'node_modules/', '.svelte-kit/', 'pnpm-lock.yaml', 'packages/vite-plugin/src/runtime-inject.ts'],
   },
 );
 ```
@@ -90,9 +85,7 @@ Create `.prettierrc`:
   "printWidth": 120,
   "tabWidth": 2,
   "plugins": ["prettier-plugin-svelte"],
-  "overrides": [
-    { "files": "*.svelte", "options": { "parser": "svelte" } }
-  ]
+  "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }
 ```
 
@@ -149,6 +142,7 @@ git commit -m "chore: add ESLint + Prettier with Svelte support"
 ## Task 2: Unit Test Gaps — Protocol Validation (shared)
 
 **Files:**
+
 - Create: `packages/shared/src/protocol.test.ts`
 
 **Step 1: Write the failing tests**
@@ -212,9 +206,7 @@ describe('isDevToolsMessage', () => {
   });
 
   it('returns false for null payload', () => {
-    expect(
-      isDevToolsMessage({ source: 'svelte-devtools-pro', payload: null }),
-    ).toBe(false);
+    expect(isDevToolsMessage({ source: 'svelte-devtools-pro', payload: null })).toBe(false);
   });
 
   it('returns false for payload without type', () => {
@@ -318,6 +310,7 @@ git commit -m "test(shared): add protocol validation tests"
 ## Task 3: Unit Test Gaps — Service Worker Routing (extension)
 
 **Files:**
+
 - Create: `packages/extension/src/service-worker.test.ts`
 - Modify: `packages/extension/package.json` (add test script + vitest dep)
 - Create: `packages/extension/vitest.config.ts`
@@ -445,6 +438,7 @@ git commit -m "test(extension): add service worker message routing tests"
 ## Task 4: SvelteKit Docs Site Scaffold
 
 **Files:**
+
 - Create: `apps/docs/` (full SvelteKit project)
 - Modify: `pnpm-workspace.yaml` (add `apps/*`)
 
@@ -529,6 +523,7 @@ git commit -m "feat(docs): scaffold SvelteKit docs site with devtools plugin"
 ## Task 5: Docs Site — Layout and Documentation Pages
 
 **Files:**
+
 - Create: `apps/docs/src/routes/+layout.svelte`
 - Create: `apps/docs/src/routes/+page.svelte`
 - Create: `apps/docs/src/routes/docs/+page.svelte`
@@ -550,6 +545,7 @@ Create `apps/docs/src/routes/+page.svelte` with a project overview and quick-sta
 **Step 3: Create documentation pages**
 
 Create each docs page with relevant content:
+
 - `installation/+page.svelte` — how to install the Vite plugin + Chrome extension
 - `vite-plugin/+page.svelte` — plugin options, API reference
 - `extension/+page.svelte` — loading, usage, panel overview
@@ -575,6 +571,7 @@ git commit -m "feat(docs): add layout, home page, and documentation pages"
 ## Task 6: Docs Site — Feature Demo Pages
 
 **Files:**
+
 - Create: `apps/docs/src/routes/demos/+page.svelte`
 - Create: `apps/docs/src/routes/demos/counter/+page.svelte`
 - Create: `apps/docs/src/routes/demos/nested-state/+page.svelte`
@@ -592,17 +589,18 @@ Use @svelte:svelte-code-writer for all `.svelte` files.
 
 Each demo component targets a specific DevTools feature:
 
-| Demo | Component | DevTools Feature | Key Svelte Patterns |
-|------|-----------|-----------------|-------------------|
-| Counter | `Counter.svelte` | State inspection | `$state`, `$derived`, button click |
-| Nested State | `NestedState.svelte` | Deep object inspection | `$state` with nested objects, path-based editing |
-| Effect Chain | `EffectChain.svelte` | Reactivity graph | `$state` → `$derived` → `$effect` chain |
-| Todo List | `TodoList.svelte` | Update tracing | Array mutations (push, splice), `{#each}` with keys |
-| Context | `ContextParent.svelte` + `ContextChild.svelte` | Component tree | `setContext` / `getContext`, parent-child relationships |
+| Demo         | Component                                      | DevTools Feature       | Key Svelte Patterns                                     |
+| ------------ | ---------------------------------------------- | ---------------------- | ------------------------------------------------------- |
+| Counter      | `Counter.svelte`                               | State inspection       | `$state`, `$derived`, button click                      |
+| Nested State | `NestedState.svelte`                           | Deep object inspection | `$state` with nested objects, path-based editing        |
+| Effect Chain | `EffectChain.svelte`                           | Reactivity graph       | `$state` → `$derived` → `$effect` chain                 |
+| Todo List    | `TodoList.svelte`                              | Update tracing         | Array mutations (push, splice), `{#each}` with keys     |
+| Context      | `ContextParent.svelte` + `ContextChild.svelte` | Component tree         | `setContext` / `getContext`, parent-child relationships |
 
 **Step 1: Create demo components**
 
 Each component should:
+
 - Use the Svelte 5 patterns listed above
 - Have interactive UI (buttons, inputs) for triggering state changes
 - Add `data-testid` attributes on interactive elements and output elements for e2e targeting
@@ -651,6 +649,7 @@ git commit -m "feat(docs): add feature demo components and pages"
 ## Task 7: Integration Tests — Plugin Output Verification
 
 **Files:**
+
 - Create: `tests/integration/fixtures/basic-counter.svelte`
 - Create: `tests/integration/fixtures/derived-chain.svelte`
 - Create: `tests/integration/fixtures/effect-component.svelte`
@@ -677,6 +676,7 @@ export default defineConfig({
 Create minimal `.svelte` files that exercise each transform pattern:
 
 `tests/integration/fixtures/basic-counter.svelte`:
+
 ```svelte
 <script>
   let count = $state(0);
@@ -686,6 +686,7 @@ Create minimal `.svelte` files that exercise each transform pattern:
 ```
 
 `tests/integration/fixtures/derived-chain.svelte`:
+
 ```svelte
 <script>
   let input = $state(1);
@@ -697,6 +698,7 @@ Create minimal `.svelte` files that exercise each transform pattern:
 ```
 
 `tests/integration/fixtures/effect-component.svelte`:
+
 ```svelte
 <script>
   let count = $state(0);
@@ -707,18 +709,17 @@ Create minimal `.svelte` files that exercise each transform pattern:
   });
 </script>
 
-<button onclick={() => count++}>Inc</button>
-<p>{log}</p>
+<button onclick={() => count++}>Inc</button><p>{log}</p>
 ```
 
 `tests/integration/fixtures/nested-reactivity.svelte`:
+
 ```svelte
 <script>
   let user = $state({ name: 'Alice', address: { city: 'Paris' } });
 </script>
 
-<input bind:value={user.name} />
-<p>{user.address.city}</p>
+<input bind:value={user.name} /><p>{user.address.city}</p>
 ```
 
 **Step 3: Write integration tests**
@@ -833,6 +834,7 @@ git commit -m "test: add integration tests for plugin output verification"
 ## Task 8: Playwright Setup + E2E Runtime Tests
 
 **Files:**
+
 - Create: `tests/playwright.config.ts`
 - Create: `tests/e2e/runtime/component-tree.spec.ts`
 - Create: `tests/e2e/runtime/state-inspection.spec.ts`
@@ -988,7 +990,10 @@ test.describe('State Inspection', () => {
       return new Promise<any[]>((resolve) => {
         const tree = window.__svelte_devtools__?.getTree() ?? [];
         const counter = tree.find((n: any) => n.name === 'Counter');
-        if (!counter) { resolve([]); return; }
+        if (!counter) {
+          resolve([]);
+          return;
+        }
 
         window.addEventListener('message', function handler(e) {
           if (e.data?.source === 'svelte-devtools-pro' && e.data?.payload?.type === 'state:snapshot') {
@@ -997,10 +1002,13 @@ test.describe('State Inspection', () => {
           }
         });
 
-        window.postMessage({
-          source: 'svelte-devtools-pro',
-          payload: { type: 'inspect:component', id: counter.id },
-        }, '*');
+        window.postMessage(
+          {
+            source: 'svelte-devtools-pro',
+            payload: { type: 'inspect:component', id: counter.id },
+          },
+          '*',
+        );
 
         setTimeout(() => resolve([]), 3000);
       });
@@ -1048,10 +1056,13 @@ test.describe('Reactivity Graph', () => {
           }
         });
 
-        window.postMessage({
-          source: 'svelte-devtools-pro',
-          payload: { type: 'graph:request' },
-        }, '*');
+        window.postMessage(
+          {
+            source: 'svelte-devtools-pro',
+            payload: { type: 'graph:request' },
+          },
+          '*',
+        );
 
         setTimeout(() => resolve(null), 3000);
       });
@@ -1076,10 +1087,13 @@ test.describe('Profiler', () => {
     const profilerData = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
         // Start profiling
-        window.postMessage({
-          source: 'svelte-devtools-pro',
-          payload: { type: 'profiler:start' },
-        }, '*');
+        window.postMessage(
+          {
+            source: 'svelte-devtools-pro',
+            payload: { type: 'profiler:start' },
+          },
+          '*',
+        );
 
         // Trigger a re-render by clicking
         const btn = document.querySelector('[data-testid="counter-increment"]') as HTMLElement;
@@ -1094,10 +1108,13 @@ test.describe('Profiler', () => {
             }
           });
 
-          window.postMessage({
-            source: 'svelte-devtools-pro',
-            payload: { type: 'profiler:stop' },
-          }, '*');
+          window.postMessage(
+            {
+              source: 'svelte-devtools-pro',
+              payload: { type: 'profiler:stop' },
+            },
+            '*',
+          );
 
           setTimeout(() => resolve(null), 3000);
         }, 200);
@@ -1220,6 +1237,7 @@ git commit -m "test: add Playwright e2e runtime tests"
 ## Task 9: E2E Extension Tests
 
 **Files:**
+
 - Create: `tests/e2e/extension/panel-renders.spec.ts`
 - Create: `tests/e2e/extension/state-editing.spec.ts`
 
@@ -1265,15 +1283,18 @@ test.describe('State Editing via Bridge', () => {
       for (const [signal, meta] of window.__svelte_devtools__!.signalMap) {
         if (meta.label === 'count' && meta.componentId === counter.id) {
           // Direct state edit via bridge message
-          window.postMessage({
-            source: 'svelte-devtools-pro',
-            payload: {
-              type: 'state:edit',
-              signalId: meta.id,
-              path: [],
-              value: 42,
+          window.postMessage(
+            {
+              source: 'svelte-devtools-pro',
+              payload: {
+                type: 'state:edit',
+                signalId: meta.id,
+                path: [],
+                value: 42,
+              },
             },
-          }, '*');
+            '*',
+          );
           return true;
         }
       }
@@ -1312,6 +1333,7 @@ git commit -m "test: add e2e extension tests for panel rendering and state editi
 ## Task 10: GitHub Actions CI
 
 **Files:**
+
 - Create: `.github/workflows/pr.yml`
 - Create: `.github/workflows/main.yml`
 
@@ -1521,6 +1543,7 @@ git commit -m "ci: add GitHub Actions workflows for PR and main branch"
 ## Task 11: Root Package Scripts + Final Wiring
 
 **Files:**
+
 - Modify: `package.json` (consolidate all scripts)
 - Modify: `.gitignore` (add Playwright artifacts)
 
@@ -1579,21 +1602,22 @@ git commit -m "chore: consolidate scripts and add Playwright artifacts to gitign
 
 ## Task Summary
 
-| Task | Description | Estimated Steps |
-|------|-------------|----------------|
-| 1 | ESLint + Prettier setup | 7 |
-| 2 | Unit tests: protocol validation | 3 |
-| 3 | Unit tests: service worker routing | 5 |
-| 4 | SvelteKit docs site scaffold | 6 |
-| 5 | Docs site: layout + documentation pages | 5 |
-| 6 | Docs site: feature demo pages | 5 |
-| 7 | Integration tests: plugin output | 5 |
-| 8 | Playwright + e2e runtime tests | 7 |
-| 9 | E2e extension tests | 3 |
-| 10 | GitHub Actions CI | 3 |
-| 11 | Root scripts + final wiring | 4 |
+| Task | Description                             | Estimated Steps |
+| ---- | --------------------------------------- | --------------- |
+| 1    | ESLint + Prettier setup                 | 7               |
+| 2    | Unit tests: protocol validation         | 3               |
+| 3    | Unit tests: service worker routing      | 5               |
+| 4    | SvelteKit docs site scaffold            | 6               |
+| 5    | Docs site: layout + documentation pages | 5               |
+| 6    | Docs site: feature demo pages           | 5               |
+| 7    | Integration tests: plugin output        | 5               |
+| 8    | Playwright + e2e runtime tests          | 7               |
+| 9    | E2e extension tests                     | 3               |
+| 10   | GitHub Actions CI                       | 3               |
+| 11   | Root scripts + final wiring             | 4               |
 
 **Dependencies:**
+
 - Tasks 1-3 are independent, can run in parallel
 - Task 4 must complete before Tasks 5-6
 - Task 5 must complete before Task 6

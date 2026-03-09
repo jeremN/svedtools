@@ -8,13 +8,12 @@ function copyExtensionAssets(): import('vite').Plugin {
   return {
     name: 'copy-extension-assets',
     closeBundle() {
-      copyFileSync(
-        resolve(__dirname, 'manifest.json'),
-        resolve(__dirname, 'dist/manifest.json'),
-      );
+      copyFileSync(resolve(__dirname, 'manifest.json'), resolve(__dirname, 'dist/manifest.json'));
       try {
         mkdirSync(resolve(__dirname, 'dist/icons'), { recursive: true });
-      } catch { /* already exists */ }
+      } catch {
+        /* already exists */
+      }
     },
   };
 }

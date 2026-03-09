@@ -10,5 +10,10 @@
 </div>
 
 <style>
-  .child { margin-top: 8px; padding: 8px; border: 1px solid #aaa; border-radius: 4px; }
+  .child {
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+  }
 </style>

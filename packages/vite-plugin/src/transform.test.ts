@@ -101,9 +101,8 @@ describe('transformSvelteOutput', () => {
   });
 
   it('handles alternative $ namespace name', () => {
-    const code = COUNTER_FIXTURE.replace(/\$/g, 'svelte_internal');
-    // This won't match because the import source doesn't contain 'svelte_internal_client'
-    // with the renamed $. Let's test with proper import.
+    // The simple replacement won't match because the import source doesn't contain
+    // 'svelte_internal_client' with the renamed $. Test with proper import instead.
     const customCode = `
 import * as internal from "svelte/internal/svelte_internal_client";
 

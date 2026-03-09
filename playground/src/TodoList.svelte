@@ -12,7 +12,7 @@
   let nextId = $state(3);
   let newText = $state('');
 
-  let remaining = $derived(todos.filter(t => !t.done).length);
+  let remaining = $derived(todos.filter((t) => !t.done).length);
 
   function addTodo() {
     if (!newText.trim()) return;
@@ -21,13 +21,18 @@
   }
 
   function removeTodo(id: number) {
-    const idx = todos.findIndex(t => t.id === id);
+    const idx = todos.findIndex((t) => t.id === id);
     if (idx !== -1) todos.splice(idx, 1);
   }
 </script>
 
 <div>
-  <form onsubmit={(e) => { e.preventDefault(); addTodo(); }}>
+  <form
+    onsubmit={(e) => {
+      e.preventDefault();
+      addTodo();
+    }}
+  >
     <input bind:value={newText} placeholder="Add todo..." />
     <button type="submit">Add</button>
   </form>
@@ -44,5 +49,8 @@
 </div>
 
 <style>
-  .done { text-decoration: line-through; opacity: 0.5; }
+  .done {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
 </style>

@@ -32,10 +32,7 @@ const DEFAULT_OPTIONS: Required<SerializeOptions> = {
  * Safely serialize a value for transport over postMessage.
  * Handles Svelte Proxies, circular references, DOM nodes, and deep objects.
  */
-export function serialize(
-  value: unknown,
-  options: SerializeOptions = {},
-): SerializedValue {
+export function serialize(value: unknown, options: SerializeOptions = {}): SerializedValue {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const seen = new WeakSet<object>();
   return serializeInner(value, 0, opts, seen, opts.basePath);
@@ -70,9 +67,8 @@ export function serializeAtPath(
   }
 
   // Serialize all children at this level
-  const unwrapped = (current && typeof current === 'object')
-    ? unwrapProxy(current as Record<string | symbol, unknown>)
-    : current;
+  const unwrapped =
+    current && typeof current === 'object' ? unwrapProxy(current as Record<string | symbol, unknown>) : current;
 
   if (Array.isArray(unwrapped)) {
     const result: Record<string, SerializedValue> = {};
@@ -122,6 +118,7 @@ function serializeInner(
   }
 
   if (t === 'symbol') return `Symbol(${(value as symbol).description ?? ''})`;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   if (t === 'function') return `fn ${(value as Function).name || 'anonymous'}()`;
 
   // From here on, value is an object
@@ -204,10 +201,7 @@ function serializeArray(
   seen: WeakSet<object>,
   path: string,
 ): SerializedArray {
-  const preview = arr
-    .slice(0, opts.maxArrayPreview)
-    .map(previewValue)
-    .join(', ');
+  const preview = arr.slice(0, opts.maxArrayPreview).map(previewValue).join(', ');
 
   return {
     __type: 'array',
@@ -233,9 +227,7 @@ function serializeObject(
   const previewKeys = keys.slice(0, opts.maxObjectPreview);
   let preview: string;
   try {
-    preview = previewKeys
-      .map((k) => `${k}: ${previewValue(obj[k])}`)
-      .join(', ');
+    preview = previewKeys.map((k) => `${k}: ${previewValue(obj[k])}`).join(', ');
   } catch {
     preview = '{...}';
   }
@@ -289,9 +281,5 @@ function unwrapProxy(obj: Record<string | symbol, unknown>): Record<string | sym
 }
 
 function isDomNode(value: unknown): boolean {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).nodeType === 'number'
-  );
+  return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>).nodeType === 'number';
 }

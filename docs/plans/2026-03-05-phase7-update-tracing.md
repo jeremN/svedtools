@@ -13,6 +13,7 @@
 ### Task 1: Update $.set transform to capture pre-mutation value
 
 **Files:**
+
 - Modify: `packages/vite-plugin/src/transform.ts:204-212`
 - Modify: `packages/vite-plugin/src/transform.test.ts:82-85`
 
@@ -69,6 +70,7 @@ git commit -m "feat(transform): add preMutation capture for $.set instrumentatio
 ### Task 2: Update $.update transform to capture pre/post mutation values
 
 **Files:**
+
 - Modify: `packages/vite-plugin/src/transform.ts:222-233`
 - Modify: `packages/vite-plugin/src/transform.test.ts:65-68,87-93`
 
@@ -112,14 +114,8 @@ function instrumentUpdate(s: MagicString, node: any): void {
   const signalArg = s.slice(args[0].start, args[0].end);
 
   // IIFE preserves $.update return value while capturing pre/post mutation
-  s.prependLeft(
-    node.start,
-    `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `,
-  );
-  s.appendRight(
-    node.end,
-    `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`,
-  );
+  s.prependLeft(node.start, `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `);
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`);
 }
 ```
 
@@ -142,6 +138,7 @@ git commit -m "feat(transform): add preMutation/onMutation IIFE for $.update"
 ### Task 3: Add bridge tracing infrastructure
 
 **Files:**
+
 - Modify: `packages/vite-plugin/src/runtime-inject.ts`
 
 This is the largest task — add all bridge-side tracing to `runtime-inject.ts`.
@@ -151,12 +148,12 @@ This is the largest task — add all bridge-side tracing to `runtime-inject.ts`.
 After line 37 (`const pendingMutations = [];`), add:
 
 ```javascript
-  // -- Tracing --
-  const MAX_TRACE_MUTATIONS = 200;
-  let traceFlushScheduled = false;
-  const tracePending = [];        // root cause mutations for current microtask
-  const traceDomMutations = [];   // DOM changes from MutationObserver
-  const preCapture = new Map();   // signal -> serialized old value
+// -- Tracing --
+const MAX_TRACE_MUTATIONS = 200;
+let traceFlushScheduled = false;
+const tracePending = []; // root cause mutations for current microtask
+const traceDomMutations = []; // DOM changes from MutationObserver
+const preCapture = new Map(); // signal -> serialized old value
 ```
 
 **Step 2: Add preMutation method to bridge**
@@ -226,57 +223,62 @@ Replace the `onMutation` method body (lines 343-364):
 Add after the bridge object (before the message listener), around line 545:
 
 ```javascript
-  // -- Trace chain building --
-  function buildChainFromSignal(signal) {
-    const steps = [];
-    if (!signal || !signal.reactions) return steps;
+// -- Trace chain building --
+function buildChainFromSignal(signal) {
+  const steps = [];
+  if (!signal || !signal.reactions) return steps;
 
-    const visited = new Set();
-    function walkReactions(reactions) {
-      if (!reactions || !Array.isArray(reactions)) return;
-      for (const r of reactions) {
-        if (!r || visited.has(r)) continue;
-        visited.add(r);
-        if (steps.length >= 50) return; // cap chain depth
+  const visited = new Set();
+  function walkReactions(reactions) {
+    if (!reactions || !Array.isArray(reactions)) return;
+    for (const r of reactions) {
+      if (!r || visited.has(r)) continue;
+      visited.add(r);
+      if (steps.length >= 50) return; // cap chain depth
 
-        const isDerived = !('teardown' in r);
-        let effectId = null;
-        if (!isDerived) {
-          for (const [eid, eff] of effectMap) {
-            if (eff.fn === r.fn) { effectId = eid; break; }
+      const isDerived = !('teardown' in r);
+      let effectId = null;
+      if (!isDerived) {
+        for (const [eid, eff] of effectMap) {
+          if (eff.fn === r.fn) {
+            effectId = eid;
+            break;
           }
         }
+      }
 
-        let reactionLabel = r.label || (r.fn && r.fn.name) || null;
-        let reactionValue = null;
-        if (isDerived) {
-          try { reactionValue = safeSerialize(r.v); } catch(e) {}
-        }
+      let reactionLabel = r.label || (r.fn && r.fn.name) || null;
+      let reactionValue = null;
+      if (isDerived) {
+        try {
+          reactionValue = safeSerialize(r.v);
+        } catch (e) {}
+      }
 
-        // Find signal ID for this reaction
-        let reactionSignalId = stableReactionIds.get(r);
-        if (!reactionSignalId) {
-          reactionSignalId = genId();
-          stableReactionIds.set(r, reactionSignalId);
-        }
+      // Find signal ID for this reaction
+      let reactionSignalId = stableReactionIds.get(r);
+      if (!reactionSignalId) {
+        reactionSignalId = genId();
+        stableReactionIds.set(r, reactionSignalId);
+      }
 
-        steps.push({
-          signalId: reactionSignalId,
-          signalLabel: reactionLabel,
-          oldValue: null,
-          newValue: reactionValue,
-          effectId: effectId,
-        });
+      steps.push({
+        signalId: reactionSignalId,
+        signalLabel: reactionLabel,
+        oldValue: null,
+        newValue: reactionValue,
+        effectId: effectId,
+      });
 
-        // Recurse into derived's own reactions
-        if (isDerived && r.reactions) {
-          walkReactions(r.reactions);
-        }
+      // Recurse into derived's own reactions
+      if (isDerived && r.reactions) {
+        walkReactions(r.reactions);
       }
     }
-    walkReactions(signal.reactions);
-    return steps;
   }
+  walkReactions(signal.reactions);
+  return steps;
+}
 ```
 
 **Step 5: Add DOM mutation summary helper**
@@ -284,21 +286,21 @@ Add after the bridge object (before the message listener), around line 545:
 Add near the helper functions (after `safeSerialize`, around line 95):
 
 ```javascript
-  function summarizeDomMutation(m) {
-    if (m.type === 'attributes') {
-      return (m.target.tagName || '').toLowerCase() + '.' + m.attributeName + ' changed';
-    }
-    if (m.type === 'characterData') {
-      return 'text content changed';
-    }
-    // childList
-    const added = m.addedNodes ? m.addedNodes.length : 0;
-    const removed = m.removedNodes ? m.removedNodes.length : 0;
-    const parts = [];
-    if (added) parts.push(added + ' added');
-    if (removed) parts.push(removed + ' removed');
-    return parts.join(', ') || 'children changed';
+function summarizeDomMutation(m) {
+  if (m.type === 'attributes') {
+    return (m.target.tagName || '').toLowerCase() + '.' + m.attributeName + ' changed';
   }
+  if (m.type === 'characterData') {
+    return 'text content changed';
+  }
+  // childList
+  const added = m.addedNodes ? m.addedNodes.length : 0;
+  const removed = m.removedNodes ? m.removedNodes.length : 0;
+  const parts = [];
+  if (added) parts.push(added + ' added');
+  if (removed) parts.push(removed + ' removed');
+  return parts.join(', ') || 'children changed';
+}
 ```
 
 **Step 6: Add MutationObserver setup**
@@ -306,35 +308,39 @@ Add near the helper functions (after `safeSerialize`, around line 95):
 Add after the bridge is assigned to `window.__svelte_devtools__` (after line 610):
 
 ```javascript
-  // -- DOM MutationObserver for tracing --
-  try {
-    const domObserver = new MutationObserver(function(mutations) {
-      for (let i = 0; i < mutations.length && traceDomMutations.length < 100; i++) {
-        const m = mutations[i];
-        traceDomMutations.push({
-          type: m.type,
-          targetTag: (m.target.tagName || '#text').toLowerCase(),
-          targetId: m.target.id || null,
-          targetClass: typeof m.target.className === 'string' ? m.target.className : null,
-          attributeName: m.attributeName || null,
-          summary: summarizeDomMutation(m),
-        });
-      }
-    });
-    if (document.body) {
-      domObserver.observe(document.body, {
-        childList: true, subtree: true,
-        attributes: true, characterData: true,
-      });
-    } else {
-      document.addEventListener('DOMContentLoaded', function() {
-        domObserver.observe(document.body, {
-          childList: true, subtree: true,
-          attributes: true, characterData: true,
-        });
+// -- DOM MutationObserver for tracing --
+try {
+  const domObserver = new MutationObserver(function (mutations) {
+    for (let i = 0; i < mutations.length && traceDomMutations.length < 100; i++) {
+      const m = mutations[i];
+      traceDomMutations.push({
+        type: m.type,
+        targetTag: (m.target.tagName || '#text').toLowerCase(),
+        targetId: m.target.id || null,
+        targetClass: typeof m.target.className === 'string' ? m.target.className : null,
+        attributeName: m.attributeName || null,
+        summary: summarizeDomMutation(m),
       });
     }
-  } catch(e) {}
+  });
+  if (document.body) {
+    domObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+  } else {
+    document.addEventListener('DOMContentLoaded', function () {
+      domObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+      });
+    });
+  }
+} catch (e) {}
 ```
 
 **Step 7: Add trace flush scheduler**
@@ -342,38 +348,38 @@ Add after the bridge is assigned to `window.__svelte_devtools__` (after line 610
 Add right after the chain building function:
 
 ```javascript
-  function scheduleTraceFlush() {
-    if (traceFlushScheduled) return;
-    traceFlushScheduled = true;
-    queueMicrotask(function() {
-      traceFlushScheduled = false;
-      if (tracePending.length === 0) return;
+function scheduleTraceFlush() {
+  if (traceFlushScheduled) return;
+  traceFlushScheduled = true;
+  queueMicrotask(function () {
+    traceFlushScheduled = false;
+    if (tracePending.length === 0) return;
 
-      // Build one trace per root mutation
-      const mutations = tracePending.splice(0);
-      const domSnap = traceDomMutations.splice(0);
+    // Build one trace per root mutation
+    const mutations = tracePending.splice(0);
+    const domSnap = traceDomMutations.splice(0);
 
-      for (const rootMut of mutations) {
-        const chain = buildChainFromSignal(rootMut._signal);
-        emit({
-          type: 'trace:update',
-          trace: {
-            id: genId(),
-            timestamp: rootMut.timestamp,
-            rootCause: {
-              signalId: rootMut.signalId,
-              signalLabel: rootMut.signalLabel,
-              componentId: rootMut.componentId,
-              componentName: rootMut.componentName,
-              stackTrace: rootMut.stackTrace,
-            },
-            chain: chain,
-            domMutations: domSnap,
+    for (const rootMut of mutations) {
+      const chain = buildChainFromSignal(rootMut._signal);
+      emit({
+        type: 'trace:update',
+        trace: {
+          id: genId(),
+          timestamp: rootMut.timestamp,
+          rootCause: {
+            signalId: rootMut.signalId,
+            signalLabel: rootMut.signalLabel,
+            componentId: rootMut.componentId,
+            componentName: rootMut.componentName,
+            stackTrace: rootMut.stackTrace,
           },
-        });
-      }
-    });
-  }
+          chain: chain,
+          domMutations: domSnap,
+        },
+      });
+    }
+  });
+}
 ```
 
 **Step 8: Build and verify**
@@ -396,6 +402,7 @@ git commit -m "feat(bridge): add always-on update tracing with stack capture, ch
 ### Task 4: Create tracer store
 
 **Files:**
+
 - Create: `packages/extension/src/panel/lib/tracer.svelte.ts`
 
 **Step 1: Create the store file**
@@ -413,46 +420,46 @@ let selectedTraceId: NodeId | null = $state(null);
 // -- Exported accessors --
 
 export function getTraces(): UpdateTrace[] {
-	return traces;
+  return traces;
 }
 
 export function getSelectedTraceId(): NodeId | null {
-	return selectedTraceId;
+  return selectedTraceId;
 }
 
 export function getSelectedTrace(): UpdateTrace | null {
-	if (!selectedTraceId) return null;
-	return traces.find((t) => t.id === selectedTraceId) ?? null;
+  if (!selectedTraceId) return null;
+  return traces.find((t) => t.id === selectedTraceId) ?? null;
 }
 
 // -- Actions --
 
 export function selectTrace(id: NodeId | null): void {
-	selectedTraceId = id;
+  selectedTraceId = id;
 }
 
 export function clearTraces(): void {
-	traces = [];
-	selectedTraceId = null;
+  traces = [];
+  selectedTraceId = null;
 }
 
 // -- Message processing --
 
 export function processTraceMessage(message: BridgeToPanelMessage): void {
-	if (message.type !== 'trace:update') return;
-	// Ring buffer: evict oldest when full
-	if (traces.length >= MAX_TRACES) {
-		traces = [...traces.slice(-(MAX_TRACES - 1)), message.trace];
-	} else {
-		traces = [...traces, message.trace];
-	}
+  if (message.type !== 'trace:update') return;
+  // Ring buffer: evict oldest when full
+  if (traces.length >= MAX_TRACES) {
+    traces = [...traces.slice(-(MAX_TRACES - 1)), message.trace];
+  } else {
+    traces = [...traces, message.trace];
+  }
 }
 
 // -- Reset --
 
 export function resetTracerState(): void {
-	traces = [];
-	selectedTraceId = null;
+  traces = [];
+  selectedTraceId = null;
 }
 ```
 
@@ -473,6 +480,7 @@ git commit -m "feat(panel): add tracer store with ring buffer"
 ### Task 5: Create UpdateTracer.svelte component
 
 **Files:**
+
 - Create: `packages/extension/src/panel/components/UpdateTracer.svelte`
 
 **IMPORTANT:** Use `@svelte:svelte-code-writer` skill via the svelte-file-editor agent.
@@ -480,6 +488,7 @@ git commit -m "feat(panel): add tracer store with ring buffer"
 **Step 1: Create the component**
 
 The component should:
+
 - Display a scrollable timeline of traces (most recent first)
 - Each trace row shows: relative timestamp, signal label, component name, chain length badge
 - Clicking a trace expands it to show:
@@ -490,11 +499,13 @@ The component should:
 - Color scheme matching the existing dark DevTools theme (#1e1e1e background, #ccc text, #ff3e00 Svelte orange)
 
 Imports needed:
+
 ```typescript
 import { getTraces, getSelectedTraceId, selectTrace, clearTraces } from '../lib/tracer.svelte.js';
 ```
 
 Layout structure:
+
 ```
 ┌─────────────────────────────────────────┐
 │ [Clear] button            trace count   │
@@ -530,6 +541,7 @@ git commit -m "feat(panel): add UpdateTracer component with timeline and trace d
 ### Task 6: Wire everything together
 
 **Files:**
+
 - Modify: `packages/extension/src/panel/main.ts`
 - Modify: `packages/extension/src/panel/App.svelte`
 
@@ -550,17 +562,20 @@ onDisconnect(resetTracerState);
 **Step 2: Replace Tracer placeholder in App.svelte**
 
 Add import:
+
 ```typescript
 import UpdateTracer from './components/UpdateTracer.svelte';
 ```
 
 Replace line 58:
+
 ```svelte
 {:else}
   <div style="padding: 16px"><p>Update tracer will appear here</p></div>
 ```
 
 With:
+
 ```svelte
 {:else}
   <UpdateTracer />
@@ -586,6 +601,7 @@ git commit -m "feat(panel): wire UpdateTracer into main routing and App tab"
 ### Task 7: Update PLAN.md and final commit
 
 **Files:**
+
 - Modify: `PLAN.md`
 
 **Step 1: Update progress table**
@@ -595,6 +611,7 @@ Change Phase 7 row from `Pending` to `**Complete**` with branch `feat/phase-1-sc
 **Step 2: Add completion notes**
 
 Add a "Phase 7: Update Tracing — Completion Notes" section at the end of PLAN.md documenting:
+
 - Files created/modified
 - Design decisions (always-on tracing, microtask batching, ring buffer)
 - Any review fixes applied

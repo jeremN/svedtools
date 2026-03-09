@@ -63,27 +63,30 @@ Existing: 35 serialization tests (shared), 10 transform tests (vite-plugin).
 
 Gaps to fill:
 
-| Package | Tests to Add |
-|---------|-------------|
-| shared | `protocol.test.ts` — message validation, `isDevToolsMessage()` edge cases |
+| Package     | Tests to Add                                                                            |
+| ----------- | --------------------------------------------------------------------------------------- |
+| shared      | `protocol.test.ts` — message validation, `isDevToolsMessage()` edge cases               |
 | vite-plugin | `runtime-inject.test.ts` — bridge API surface, `middleware.test.ts` — WebSocket handler |
-| extension | `service-worker.test.ts` — message routing logic (mocked Chrome APIs) |
+| extension   | `service-worker.test.ts` — message routing logic (mocked Chrome APIs)                   |
 
 ### Layer 2 — Integration Tests (vitest + Vite API)
 
 **`plugin-output.test.ts`:**
+
 - Uses `import { build } from 'vite'` to compile fixture `.svelte` files with the plugin
 - Asserts output JS contains expected instrumentation patterns ($.set wrappers, lifecycle hooks)
 - Asserts bridge injection code is present
 - Asserts no instrumentation when plugin is disabled
 
 **`bridge-messages.test.ts`:**
+
 - Spins up a Vite dev server programmatically
 - Uses Playwright to load the page
 - Asserts `window.__SVELTE_DEVTOOLS__` is populated
 - Asserts component registration messages fire on mount
 
 **Fixtures** (`tests/integration/fixtures/`):
+
 - `basic-counter.svelte` — $.set instrumentation
 - `derived-chain.svelte` — $.update instrumentation
 - `effect-component.svelte` — $effect lifecycle hooks
@@ -93,22 +96,22 @@ Gaps to fill:
 
 Run against the docs app dev server. Test the injected runtime via `window.__SVELTE_DEVTOOLS__`:
 
-| Test | Verifies |
-|------|----------|
-| component-tree | `getComponentTree()` returns correct hierarchy |
+| Test             | Verifies                                            |
+| ---------------- | --------------------------------------------------- |
+| component-tree   | `getComponentTree()` returns correct hierarchy      |
 | state-inspection | State reads/writes via bridge after UI interactions |
-| reactivity-graph | Signal→derived→effect chains in graph data |
-| profiler | Render timings captured after interactions |
-| update-tracer | Mutation traces with correct source→effect chains |
+| reactivity-graph | Signal→derived→effect chains in graph data          |
+| profiler         | Render timings captured after interactions          |
+| update-tracer    | Mutation traces with correct source→effect chains   |
 
 ### Layer 3b — E2E Extension Tests (Playwright + Chrome)
 
 Launch Chrome with `--load-extension=packages/extension/dist`. Minimal set:
 
-| Test | Verifies |
-|------|----------|
+| Test          | Verifies                                                      |
+| ------------- | ------------------------------------------------------------- |
 | panel-renders | Extension loads, DevTools panel opens, component tree renders |
-| state-editing | Edit value in StateInspector → app DOM updates |
+| state-editing | Edit value in StateInspector → app DOM updates                |
 
 ---
 
@@ -167,9 +170,7 @@ Same jobs as PR, plus:
   "printWidth": 120,
   "tabWidth": 2,
   "plugins": ["prettier-plugin-svelte"],
-  "overrides": [
-    { "files": "*.svelte", "options": { "parser": "svelte" } }
-  ]
+  "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
 }
 ```
 
