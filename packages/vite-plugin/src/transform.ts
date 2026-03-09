@@ -171,32 +171,36 @@ function instrumentPop(s: MagicString, node: any): void {
 
 /**
  * $.user_effect(fn)
- * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) || fn; })())
+ * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) ?? fn; })())
  *
- * We register the effect and optionally wrap it for profiling.
- * But simpler approach: just add a registration call before the effect.
- *
- * Actually, simplest: inject a registration call right before the statement.
+ * We register the effect AND wrap the function for profiling.
+ * wrapEffect returns the original fn when profiling is inactive,
+ * or a timing-instrumented wrapper when profiling is active.
  */
 function instrumentUserEffect(s: MagicString, node: any, dollar: string): void {
   const args = node.arguments;
   if (args.length < 1) return;
 
-  // Find the statement that contains this expression
-  // Insert registration before the $.user_effect call
+  // Wrap the fn argument with an IIFE that registers + wraps for profiling.
+  // Uses prependLeft/appendRight (additive) rather than overwrite to avoid
+  // conflicts with inner instrumentation (e.g. $.set inside the effect body).
   s.prependLeft(
-    node.start,
-    `(window.__svelte_devtools__?.registerEffect(${s.slice(args[0].start, args[0].end)}), `,
+    args[0].start,
+    `(() => { const __fn = `,
   );
-  s.appendRight(node.end, ')');
+  s.appendRight(
+    args[0].end,
+    `; const __eid = window.__svelte_devtools__?.registerEffect(__fn); return window.__svelte_devtools__?.wrapEffect(__fn, __eid) ?? __fn; })()`,
+  );
 }
 
 /**
  * $.set(signal, value)
- * → ($.set(signal, value), window.__svelte_devtools__?.onMutation(signal))
+ * → (preMutation(signal), $.set(signal, value), onMutation(signal))
  *
- * onMutation is called AFTER set to avoid double-evaluating the value expression.
- * The bridge reads the new value from the signal directly.
+ * preMutation captures the old value (signal.v) before set runs.
+ * onMutation is called AFTER set to read the new value from the signal.
+ * This enables "Why Did This Update?" tracing by comparing old vs new.
  */
 function instrumentSet(s: MagicString, node: any): void {
   const args = node.arguments;
@@ -204,17 +208,17 @@ function instrumentSet(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
-  s.prependLeft(node.start, '(');
+  // Capture old value before set, then notify after set
+  s.prependLeft(node.start, `(window.__svelte_devtools__?.preMutation(${signalArg}), `);
   s.appendRight(node.end, `, window.__svelte_devtools__?.onMutation(${signalArg}))`);
 }
 
 /**
  * $.update(signal) or $.update(signal, -1)
- * → (window.__svelte_devtools__?.onMutation(signal), $.update(signal))
+ * → (() => { preMutation(signal); const __r = $.update(signal, -1); onMutation(signal); return __r; })()
  *
- * Unlike $.set, the signal arg is always a simple identifier (no side effects),
- * so calling onMutation BEFORE update is safe. We keep the before-call pattern
- * to preserve $.update's return value (used in `return $.update(count, -1)`).
+ * IIFE preserves $.update's return value (used in `return $.update(count, -1)`)
+ * while capturing pre/post mutation values for update tracing.
  */
 function instrumentUpdate(s: MagicString, node: any): void {
   const args = node.arguments;
@@ -222,11 +226,15 @@ function instrumentUpdate(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
+  // IIFE preserves $.update return value while capturing pre/post mutation
   s.prependLeft(
     node.start,
-    `(window.__svelte_devtools__?.onMutation(${signalArg}), `,
+    `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `,
   );
-  s.appendRight(node.end, ')');
+  s.appendRight(
+    node.end,
+    `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`,
+  );
 }
 
 /**

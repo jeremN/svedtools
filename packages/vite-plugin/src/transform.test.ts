@@ -62,8 +62,9 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('__svelte_devtools__?.onPop()');
   });
 
-  it('instruments $.update with onMutation call', () => {
+  it('instruments $.update with preMutation and onMutation calls', () => {
     const result = transformSvelteOutput(COUNTER_FIXTURE, 'Counter.svelte');
+    expect(result!.code).toContain('__svelte_devtools__?.preMutation(count)');
     expect(result!.code).toContain('__svelte_devtools__?.onMutation(count)');
   });
 
@@ -79,8 +80,9 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "doubled")');
   });
 
-  it('instruments $.set with onMutation call', () => {
+  it('instruments $.set with preMutation and onMutation calls', () => {
     const result = transformSvelteOutput(EFFECT_FIXTURE, 'EffectChain.svelte');
+    expect(result!.code).toContain('__svelte_devtools__?.preMutation(processed)');
     expect(result!.code).toContain('__svelte_devtools__?.onMutation(processed)');
   });
 
