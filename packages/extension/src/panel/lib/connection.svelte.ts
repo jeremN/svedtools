@@ -8,6 +8,7 @@ const RECONNECT_DELAY_MS = 1000;
 let connected = $state(false);
 let svelteDetected = $state(false);
 let svelteVersion: string | null = $state(null);
+let svelteUntested = $state(false);
 let messages: BridgeToPanelMessage[] = $state([]);
 
 let port: chrome.runtime.Port | null = null;
@@ -47,6 +48,10 @@ export function getSvelteDetected(): boolean {
 
 export function getSvelteVersion(): string | null {
   return svelteVersion;
+}
+
+export function getSvelteUntested(): boolean {
+  return svelteUntested;
 }
 
 export function getMessages(): BridgeToPanelMessage[] {
@@ -108,6 +113,7 @@ export function disconnect(): void {
   connected = false;
   svelteDetected = false;
   svelteVersion = null;
+  svelteUntested = false;
   messages = [];
 }
 
@@ -117,6 +123,7 @@ function handleMessage(message: BridgeToPanelMessage): void {
   if (message.type === 'bridge:ready') {
     svelteDetected = true;
     svelteVersion = message.svelteVersion;
+    svelteUntested = message.untested === true;
   }
 
   messages.push(message);
@@ -135,6 +142,7 @@ function handleDisconnect(): void {
   connected = false;
   svelteDetected = false;
   svelteVersion = null;
+  svelteUntested = false;
 
   // Notify disconnect listeners (e.g., component store reset)
   for (const listener of [...disconnectListeners]) {

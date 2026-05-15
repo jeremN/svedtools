@@ -15,7 +15,7 @@ const contentPorts = new Map<number, chrome.runtime.Port>();
 const panelPorts = new Map<number, chrome.runtime.Port>();
 
 // Track which tabs have Svelte detected (with full bridge:ready data)
-const svelteTabs = new Map<number, { svelteVersion: string; protocolVersion: number }>();
+const svelteTabs = new Map<number, { svelteVersion: string; protocolVersion: number; untested: boolean }>();
 
 function setBadge(tabId: number, detected: boolean) {
   if (detected) {
@@ -43,6 +43,7 @@ chrome.runtime.onConnect.addListener((port) => {
         svelteTabs.set(tabId, {
           svelteVersion: message.svelteVersion || 'unknown',
           protocolVersion: message.protocolVersion || 1,
+          untested: message.untested === true,
         });
         setBadge(tabId, true);
       }

@@ -71,6 +71,12 @@ export interface BridgeReadyMessage {
   type: 'bridge:ready';
   svelteVersion: string;
   protocolVersion: number;
+  /**
+   * True when the running Svelte version is outside the range the bridge was
+   * tested against (see TESTED_SVELTE_RANGE in vite-plugin/src/bridge/compat.ts).
+   * Panel shows a warning banner when set. Optional/additive — safe at protocol v1.
+   */
+  untested?: boolean;
 }
 
 export interface ComponentTreeSnapshotMessage {

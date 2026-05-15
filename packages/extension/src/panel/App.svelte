@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getConnected, getSvelteDetected, getSvelteVersion } from './lib/connection.svelte.js';
+  import { getConnected, getSvelteDetected, getSvelteVersion, getSvelteUntested } from './lib/connection.svelte.js';
   import ComponentTree from './components/ComponentTree.svelte';
   import StateInspector from './components/StateInspector.svelte';
   import ReactivityGraph from './components/ReactivityGraph.svelte';
@@ -14,10 +14,16 @@
   let connected = $derived(getConnected());
   let svelteDetected = $derived(getSvelteDetected());
   let svelteVersion = $derived(getSvelteVersion());
+  let svelteUntested = $derived(getSvelteUntested());
   let searchFilter = $derived(getSearchFilter());
 </script>
 
 <div class="devtools">
+  {#if svelteDetected && svelteUntested}
+    <div class="untested-banner" role="status">
+      <strong>Heads up:</strong> Running an untested Svelte version ({svelteVersion}). DevTools features may misbehave.
+    </div>
+  {/if}
   <nav class="tabs">
     {#each tabs as tab (tab)}
       <button class="tab" class:active={activeTab === tab} onclick={() => (activeTab = tab)}>
@@ -179,5 +185,17 @@
     flex: 1;
     overflow-y: auto;
     min-width: 200px;
+  }
+  .untested-banner {
+    padding: 6px 12px;
+    background: #3a2e00;
+    border-bottom: 1px solid #cca700;
+    color: #ffd966;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .untested-banner strong {
+    color: #ffefa8;
+    margin-right: 4px;
   }
 </style>
