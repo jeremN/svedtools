@@ -9,3 +9,4 @@ build/
 test-results/
 playwright-report/
 blob-report/
+.demo-chromium-profile/
