@@ -41,6 +41,10 @@ jobs:
       - name: Build docs site
         run: pnpm --filter @svelte-devtools/docs build
       - uses: actions/configure-pages@v5
+        with:
+          # Auto-enable Pages on first run so no manual repo-settings toggle
+          # is needed. Requires `pages: write` permission (set at workflow level).
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/docs/build
