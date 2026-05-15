@@ -1,0 +1,60 @@
+name: Svelte version compat matrix
+
+# Runs the unit + integration tests against multiple Svelte minors so we
+# catch internal-API drift before users do. Skips e2e (slower, redundant
+# for compat purposes — the AST transform + bridge wiring is exercised
+# by the unit and integration layers).
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with TESTED_SVELTE_RANGE in
+        # packages/vite-plugin/src/bridge/compat.ts
+        svelte:
+          - '5.0.0'
+          - '5.10.0'
+          - '5.20.0'
+          - '5.x'
+    env:
+      SVELTE_VERSION: ${{ matrix.svelte }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Pin Svelte version via pnpm.overrides
+        run: node scripts/pin-svelte-version.mjs
+
+      - name: Install (lockfile may change due to override)
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Report Svelte version actually installed
+        run: node -e "console.log('svelte version:', require('svelte/package.json').version)"
+
+      - name: Build all packages
+        run: pnpm run build
+
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: Integration tests
+        run: pnpm run test:integration
