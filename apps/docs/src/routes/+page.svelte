@@ -18,9 +18,9 @@ export default defineConfig({
 <div class="home">
   {#if !dev}
     <aside class="static-notice" role="note">
-      <strong>Heads up:</strong> the DevTools panel won't activate on this static site. The Vite
-      plugin only injects its runtime bridge in dev mode, so this prerendered page has nothing for
-      the extension to attach to. Clone the repo and run <code>pnpm dev:docs</code> (or
+      <strong>Heads up:</strong> the DevTools panel won't activate on this static site. The Vite plugin only injects its
+      runtime bridge in dev mode, so this prerendered page has nothing for the extension to attach to. Clone the repo
+      and run <code>pnpm dev:docs</code> (or
       <code>pnpm dev</code> for the playground) to see it work.
     </aside>
   {/if}

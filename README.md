@@ -51,7 +51,7 @@ pnpm dev            # playground dev server at http://localhost:5173/
 
 Then open the page, launch Chrome DevTools (`Cmd+Option+I`), and select the **Svelte** tab.
 
-**Hands-on demo launcher** — spins up an *isolated* Chromium with the extension preloaded,
+**Hands-on demo launcher** — spins up an _isolated_ Chromium with the extension preloaded,
 so you don't touch your everyday Chrome profile:
 
 ```bash
@@ -84,16 +84,16 @@ tests/           integration + e2e (Playwright)
 
 ## Common scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm build` | Build all packages |
-| `pnpm dev` | Playground dev server (:5173) |
-| `pnpm dev:docs` | Docs site dev server |
-| `pnpm test` | Unit tests across packages |
-| `pnpm test:integration` | Integration tests (`tests/`) |
-| `pnpm test:e2e` | Playwright runtime e2e |
-| `pnpm check` | `svelte-check` / `tsc` across packages |
-| `pnpm lint` / `pnpm format` | ESLint / Prettier |
+| Command                     | What it does                           |
+| --------------------------- | -------------------------------------- |
+| `pnpm build`                | Build all packages                     |
+| `pnpm dev`                  | Playground dev server (:5173)          |
+| `pnpm dev:docs`             | Docs site dev server                   |
+| `pnpm test`                 | Unit tests across packages             |
+| `pnpm test:integration`     | Integration tests (`tests/`)           |
+| `pnpm test:e2e`             | Playwright runtime e2e                 |
+| `pnpm check`                | `svelte-check` / `tsc` across packages |
+| `pnpm lint` / `pnpm format` | ESLint / Prettier                      |
 
 ## Gotchas
 
@@ -115,4 +115,4 @@ Svelte minors every Monday; the single place that touches Svelte internals is
 > **Named signals require newer Svelte.** Labeling `$state` / `$derived` values by their
 > source name relies on the compiler emitting the `$.tag(signal, label)` dev helper, which
 > is absent on early Svelte 5 (≤ 5.20). On those versions the component tree and update
-> tracing still work — only signal *names* are unavailable.
+> tracing still work — only signal _names_ are unavailable.
