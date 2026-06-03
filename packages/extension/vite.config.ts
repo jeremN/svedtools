@@ -1,19 +1,20 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'node:path';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 
 /** Copies manifest.json and icons to dist after build */
 function copyExtensionAssets(): import('vite').Plugin {
   return {
     name: 'copy-extension-assets',
     closeBundle() {
-      copyFileSync(resolve(__dirname, 'manifest.json'), resolve(__dirname, 'dist/manifest.json'));
-      try {
-        mkdirSync(resolve(__dirname, 'dist/icons'), { recursive: true });
-      } catch {
-        /* already exists */
-      }
+      const dist = resolve(__dirname, 'dist');
+      // closeBundle also runs when the build errors before writing output, in
+      // which case dist won't exist. Bail early so the real build error surfaces
+      // instead of masking it with a misleading ENOENT from the copy below.
+      if (!existsSync(dist)) return;
+      copyFileSync(resolve(__dirname, 'manifest.json'), resolve(dist, 'manifest.json'));
+      mkdirSync(resolve(dist, 'icons'), { recursive: true });
     },
   };
 }
