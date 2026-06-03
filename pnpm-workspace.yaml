@@ -2,3 +2,7 @@ packages:
   - 'packages/*'
   - 'apps/*'
   - 'playground'
+
+# pnpm 11 gates dependency build scripts; allow esbuild's (used by vite + tsup).
+allowBuilds:
+  esbuild: true

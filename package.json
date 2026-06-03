@@ -22,12 +22,6 @@
     "node": ">=24",
     "pnpm": ">=11"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ],
-    "onlyBuiltDependenciesWrittenByPnpm": true
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
