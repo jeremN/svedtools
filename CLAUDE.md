@@ -41,4 +41,4 @@ node scripts/launch-extension-demo.mjs   # hands-on: isolated Chrome with the ex
 
 - Conventional-commits subject lines, short, no multi-paragraph body.
 - Private/coworker project: **not** published to npm or the Chrome Web Store — install from source.
-- TS 6: `ignoreDeprecations: "6.0"` in `tsconfig.base.json` silences tsup's internal `baseUrl`. This is a TS-7 time-bomb (TS 7 removes `baseUrl`) — revisit on the next tsup bump.
+- Library `.d.ts` is emitted by `tsc -p tsconfig.build.json` (see each lib's build script), **not** tsup — tsup's dts pipeline injects a deprecated `baseUrl` that errors on TS 6+ (`TS5101`). The `tsconfig.build.json` uses `files: ["src/index.ts"]` so only the entry graph is emitted (no test `.d.ts`).
