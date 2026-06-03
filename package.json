@@ -2,6 +2,7 @@
   "name": "svelte-devtools-pro",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.1.1",
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm --filter playground dev",
@@ -18,8 +19,8 @@
     "test:e2e:extension": "playwright test --config tests/playwright.config.ts --project extension"
   },
   "engines": {
-    "node": ">=18",
-    "pnpm": ">=9"
+    "node": ">=24",
+    "pnpm": ">=11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
