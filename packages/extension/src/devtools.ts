@@ -31,7 +31,7 @@ function detectSvelte(): Promise<boolean> {
   return new Promise((resolve) => {
     // chrome.devtools.inspectedWindow.eval is the standard Chrome DevTools API
     // for evaluating expressions in the inspected page's context
-    chrome.devtools.inspectedWindow.eval(DETECTION_SCRIPT, (result, error) => {
+    chrome.devtools.inspectedWindow.eval<boolean>(DETECTION_SCRIPT, (result, error) => {
       resolve(!error && result === true);
     });
   });
