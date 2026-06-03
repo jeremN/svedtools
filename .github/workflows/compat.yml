@@ -4,6 +4,12 @@ name: Svelte version compat matrix
 # catch internal-API drift before users do. Skips e2e (slower, redundant
 # for compat purposes — the AST transform + bridge wiring is exercised
 # by the unit and integration layers).
+#
+# Scope: only the transform + bridge packages (vite-plugin, shared) are built
+# and unit-tested here. These are what run against the *user's* Svelte version.
+# The extension UI is shipped as a prebuilt dist compiled with the maintainer's
+# own Svelte, so rebuilding it against old minors tests nothing real (and trips
+# an esrap printer bug in Svelte < 5.20). Its build + tests run in main.yml/pr.yml.
 on:
   schedule:
     - cron: '0 6 * * 1' # Mondays 06:00 UTC
@@ -50,11 +56,11 @@ jobs:
       - name: Report Svelte version actually installed
         run: node -e "console.log('svelte version:', require('svelte/package.json').version)"
 
-      - name: Build all packages
-        run: pnpm run build
+      - name: Build transform + bridge packages
+        run: pnpm --filter vite-plugin-svelte-devtools --filter @svelte-devtools/shared build
 
-      - name: Unit tests
-        run: pnpm run test
+      - name: Unit tests (transform + bridge)
+        run: pnpm --filter vite-plugin-svelte-devtools --filter @svelte-devtools/shared test
 
       - name: Integration tests
         run: pnpm run test:integration
