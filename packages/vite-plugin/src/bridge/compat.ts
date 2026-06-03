@@ -79,8 +79,14 @@ export const Compat = {
 };
 
 /**
- * Range of Svelte versions this bridge is tested against.
+ * Range of Svelte versions this bridge *runtime* is tested against.
  * Update this whenever the compat matrix CI is bumped.
+ *
+ * Note: this is the runtime range only. Compile-time signal *naming* has a
+ * higher floor — it needs the compiler's `$.tag(signal, label)` dev helper,
+ * which early Svelte 5 (<= 5.20) does not emit. On those versions the tree and
+ * update tracing still work, but signals appear unlabeled. See the capability
+ * gate in tests/integration/plugin-output.test.ts.
  */
 export const TESTED_SVELTE_RANGE = '>=5.0.0 <5.40.0';
 
