@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { dev } from '$app/environment';
 
   const quickstart = `// vite.config.ts
 import { defineConfig } from 'vite';
@@ -15,6 +16,14 @@ export default defineConfig({
 </script>
 
 <div class="home">
+  {#if !dev}
+    <aside class="static-notice" role="note">
+      <strong>Heads up:</strong> the DevTools panel won't activate on this static site. The Vite
+      plugin only injects its runtime bridge in dev mode, so this prerendered page has nothing for
+      the extension to attach to. Clone the repo and run <code>pnpm dev:docs</code> (or
+      <code>pnpm dev</code> for the playground) to see it work.
+    </aside>
+  {/if}
   <h1>Svelte 5 DevTools</h1>
   <p class="tagline">Vite plugin + Chrome extension for inspecting Svelte 5 internals.</p>
 
@@ -54,6 +63,25 @@ export default defineConfig({
 <style>
   .home {
     max-width: 46rem;
+  }
+
+  .static-notice {
+    background: #fff8e1;
+    border: 1px solid #f0c36d;
+    border-left: 4px solid #e6a700;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.75rem;
+    font-size: 0.9rem;
+    color: #5a4500;
+    line-height: 1.5;
+  }
+
+  .static-notice code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.85em;
   }
 
   h1 {
