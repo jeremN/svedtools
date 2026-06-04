@@ -180,6 +180,20 @@ describe('serialize: circular references', () => {
     // appear in the preview. The WeakSet tracking prevents infinite loops.
     expect(result.__type).toBe('object');
   });
+
+  // The `seen` WeakSet is stack-scoped: entries are added before descending
+  // and removed (via try/finally in serializeInner) on the way back out, so it
+  // tracks only the current recursion path rather than every object ever
+  // visited. This keeps a node referenced by two sibling branches (a diamond/
+  // DAG) from being mistaken for a circular reference.
+  //
+  // NOTE: serializeArray/serializeObject currently build flat one-level
+  // previews via previewValue and never recurse back into serializeInner, so
+  // `seen` only ever holds the single top-level object today. There is no
+  // public path that shares `seen` across a recursive call, which means the
+  // diamond-vs-cycle distinction cannot be observed through serialize() yet.
+  // A regression test for that distinction must wait until child recursion is
+  // added; the stack-scoped delete is defensive insurance for that future.
 });
 
 // -- Depth Limits --

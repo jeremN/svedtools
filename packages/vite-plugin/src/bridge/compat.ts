@@ -12,6 +12,40 @@ import type { Value, Reaction, ComponentFn } from './types.js';
 export const STATE_SYMBOL = Symbol.for('state');
 export const FILENAME_SYMBOL = Symbol.for('svelte.filename');
 
+/**
+ * Reaction flag bits, mirrored from Svelte's client runtime.
+ * Source (pinned 5.56.1): node_modules/svelte/src/internal/client/constants.js:2-4.
+ *
+ * Every reaction carries a numeric flags bitfield on its `f` field. A *derived*
+ * is always constructed with the `DERIVED` bit set (`f: DERIVED | DIRTY` —
+ * reactivity/deriveds.js:72,86), while an *effect* is always constructed from an
+ * effect-family type (RENDER_EFFECT / EFFECT / BLOCK_EFFECT / ROOT_EFFECT / … —
+ * reactivity/effects.js:86-116, and every create_effect() call site at
+ * effects.js:193-437) that NEVER includes the `DERIVED` bit.
+ *
+ * That makes `(f & DERIVED)` a precise, name-independent discriminator: it does
+ * not depend on the private `teardown` field surviving a future refactor. We
+ * keep these two bits (rather than the whole table) because they are all the
+ * classifier needs — `DERIVED` to positively identify deriveds, `EFFECT` only
+ * as a corroborating positive signal for the effect family.
+ */
+const DERIVED_FLAG = 1 << 1; // svelte constants.js:2 — `export const DERIVED = 1 << 1;`
+const EFFECT_FLAG = 1 << 2; // svelte constants.js:3 — `export const EFFECT = 1 << 2;`
+
+/**
+ * Read the Svelte reaction flags bitfield (`f`) if it looks like one.
+ * Returns the number when `r` is an object carrying a numeric `f`, else null.
+ * Localized permissive cast — the `Reaction` type intentionally omits `f`, so
+ * we narrow here rather than widening the shared type (matches how the other
+ * accessors reach for not-yet-typed internal fields). Never throws on a
+ * primitive / null input.
+ */
+function reactionFlags(r: unknown): number | null {
+  if (!r || typeof r !== 'object') return null;
+  const f = (r as { f?: unknown }).f;
+  return typeof f === 'number' ? f : null;
+}
+
 export const Compat = {
   // -- Source signal access --
   getValue(signal: Value): unknown {
@@ -30,12 +64,46 @@ export const Compat = {
   },
 
   // -- Reaction (effect/derived) access --
-  /** Effects have a `teardown` field; deriveds do not. */
-  isEffect(r: Reaction): boolean {
-    return 'teardown' in r;
-  },
+  /**
+   * Layered effect/derived discriminator. The classification underpins the
+   * whole reactivity graph, so it must not hinge on one private field name.
+   *
+   * 1. PRIMARY — the flags bitfield. A derived always has the `DERIVED` bit
+   *    set; an effect never does (see DERIVED_FLAG / EFFECT_FLAG above). When
+   *    `f` is a readable number we trust it: it survives field renames and is
+   *    the authority Svelte itself uses internally.
+   * 2. FALLBACK — when `f` is absent/unrecognized (a future runtime that drops
+   *    or renames it) but we still have an object, fall back to the historical
+   *    `'teardown' in r` heuristic: effects carry a `teardown` slot, deriveds
+   *    do not. A flag-less object with neither marker (e.g. `{}`) thus resolves
+   *    to "derived", matching the pre-hardening default.
+   * 3. DEGRADE — a primitive / null input matches no signal at all. We default
+   *    it to "derived" (i.e. `isEffect` false) without throwing, preserving the
+   *    pre-hardening behaviour where the absence of an effect marker meant "not
+   *    an effect". main.ts treats effect as the complement of derived, so this
+   *    keeps an unclassifiable node out of the effect-only code paths.
+   *
+   * NOTE: `isEffect` and `isDerived` are exact complements by construction, so
+   * they can never disagree about a given reaction.
+   */
   isDerived(r: Reaction): boolean {
-    return !('teardown' in r);
+    const f = reactionFlags(r);
+    if (f !== null) {
+      // PRIMARY: flags are authoritative. A derived has DERIVED; an effect,
+      // never. Treat "DERIVED set and no effect bit" as the safe positive.
+      if ((f & DERIVED_FLAG) !== 0) return true;
+      if ((f & EFFECT_FLAG) !== 0) return false;
+      // Recognized-but-ambiguous flags (no DERIVED, no EFFECT bit — e.g. a
+      // render/block/root effect). These are all effect-family, so: not derived.
+      return false;
+    }
+    // FALLBACK: no usable flags — lean on the teardown heuristic.
+    if (r && typeof r === 'object') return !('teardown' in r);
+    // DEGRADE: unclassifiable input -> default to derived.
+    return true;
+  },
+  isEffect(r: Reaction): boolean {
+    return !this.isDerived(r);
   },
   getReactionFn(r: Reaction): ((...args: unknown[]) => unknown) | null {
     return r.fn ?? null;
@@ -79,16 +147,44 @@ export const Compat = {
 };
 
 /**
- * Range of Svelte versions this bridge *runtime* is tested against.
- * Update this whenever the compat matrix CI is bumped.
+ * The major Svelte version this bridge's *runtime* internals are validated
+ * against. This is the single source of truth: both the human-readable
+ * `TESTED_SVELTE_RANGE` string and the runtime `isTestedSvelteVersion` check
+ * derive from it, so the displayed range and the actual classifier can't drift.
+ *
+ * Why a whole major and not a minor cap: the compat matrix CI
+ * (.github/workflows/compat.yml) tests `5.0.0`, `5.10.0`, `5.20.0`, and `5.x`
+ * (latest 5) — i.e. all of Svelte 5, with no specific minor ceiling. That also
+ * matches the plugin's `svelte: ^5.0.0` peer range. Gating on the major (rather
+ * than chasing each new minor) means the "untested version" banner fires only
+ * for the next breaking line (Svelte 6+), instead of false-flagging every minor
+ * bump until someone remembers to nudge a number here.
  *
  * Note: this is the runtime range only. Compile-time signal *naming* has a
  * higher floor — it needs the compiler's `$.tag(signal, label)` dev helper,
  * which early Svelte 5 (<= 5.20) does not emit. On those versions the tree and
- * update tracing still work, but signals appear unlabeled. See the capability
- * gate in tests/integration/plugin-output.test.ts.
+ * update tracing still work, but signals appear unlabeled. That is a separate
+ * compile-time capability gate (see tests/integration/plugin-output.test.ts),
+ * NOT the runtime "tested" flag below.
  */
-export const TESTED_SVELTE_RANGE = '>=5.0.0 <5.40.0';
+const TESTED_SVELTE_MAJOR = 5;
+
+/** Human-readable range string for the panel / docs. Derived from the major above. */
+export const TESTED_SVELTE_RANGE = `>=${TESTED_SVELTE_MAJOR}.0.0 <${TESTED_SVELTE_MAJOR + 1}.0.0`;
+
+/**
+ * Pure classifier — exported for testing. Returns true if `version` is within
+ * the tested range (i.e. shares the tested major). Parses only the major so a
+ * malformed string ('next', '5-beta', '') never throws; anything that doesn't
+ * start with the tested major (including NaN) is treated as untested.
+ *
+ * Cheap on purpose — avoids pulling in a semver lib for a single major check.
+ */
+export function isTestedSvelteVersion(version: string): boolean {
+  if (!version || version === 'unknown') return false;
+  const maj = parseInt(version.split('.')[0], 10);
+  return maj === TESTED_SVELTE_MAJOR;
+}
 
 /**
  * Detect the running Svelte version and whether it falls inside the
@@ -97,11 +193,5 @@ export const TESTED_SVELTE_RANGE = '>=5.0.0 <5.40.0';
  */
 export function detectSvelteVersion(): { version: string; tested: boolean } {
   const version = window.__svelte?.v ?? 'unknown';
-  if (version === 'unknown') {
-    return { version, tested: false };
-  }
-  const [maj, min] = version.split('.').map((n) => parseInt(n, 10));
-  // Cheap range check: >=5.0 <5.40 — avoids pulling in a semver lib.
-  const tested = maj === 5 && Number.isFinite(min) && min < 40;
-  return { version, tested };
+  return { version, tested: isTestedSvelteVersion(version) };
 }

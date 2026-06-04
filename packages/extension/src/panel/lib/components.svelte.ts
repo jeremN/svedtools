@@ -51,11 +51,17 @@ export function processMessage(message: BridgeToPanelMessage): void {
       const node = message.node;
       componentMap[node.id] = node;
 
+      // Dedupe links so a re-mount or a duplicated mount message can't push the
+      // same id twice — Svelte's keyed {#each} throws on duplicate keys. (The
+      // parent's emitted node already carries its static children; this push only
+      // links dynamically-mounted children that arrive after the parent.)
       if (node.parentId === null) {
-        rootIds.push(node.id);
+        if (!rootIds.includes(node.id)) {
+          rootIds.push(node.id);
+        }
       } else {
         const parent = componentMap[node.parentId];
-        if (parent) {
+        if (parent && !parent.children.includes(node.id)) {
           parent.children.push(node.id);
         }
       }

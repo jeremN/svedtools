@@ -52,6 +52,26 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
     };
   }
 
+  if (raw instanceof Map) {
+    const entries = Array.from(raw.entries()).slice(0, PREVIEW_KEYS);
+    const body = entries.map(([k, v]) => String(k) + ' => ' + previewVal(v)).join(', ');
+    return {
+      __type: 'object',
+      preview: 'Map(' + raw.size + ') {' + body + (raw.size > PREVIEW_KEYS ? ', ...' : '') + '}',
+      childCount: raw.size,
+    };
+  }
+
+  if (raw instanceof Set) {
+    const items = Array.from(raw).slice(0, PREVIEW_KEYS);
+    const body = items.map(previewVal).join(', ');
+    return {
+      __type: 'object',
+      preview: 'Set(' + raw.size + ') {' + body + (raw.size > PREVIEW_KEYS ? ', ...' : '') + '}',
+      childCount: raw.size,
+    };
+  }
+
   let keys: string[];
   try {
     keys = Object.keys(raw as object);
@@ -81,6 +101,8 @@ export function previewVal(v: unknown): string {
   if (t === 'function') return 'fn()';
   if (v instanceof Date) return (v as Date).toISOString();
   if (v instanceof Error) return (v as Error).name;
+  if (v instanceof Map) return 'Map(' + v.size + ')';
+  if (v instanceof Set) return 'Set(' + v.size + ')';
   return '{...}';
 }
 

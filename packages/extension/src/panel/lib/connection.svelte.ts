@@ -13,6 +13,10 @@ let messages: BridgeToPanelMessage[] = $state([]);
 
 let port: chrome.runtime.Port | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+// Guards against double-notifying disconnect listeners when both the explicit
+// disconnect() path and the chrome-initiated handleDisconnect() path run for the
+// same teardown. Reset to false in connect() once a new session is established.
+let disconnectNotified = false;
 
 // -- Message subscribers --
 type MessageListener = (message: BridgeToPanelMessage) => void;
@@ -79,6 +83,8 @@ export function connect(): void {
   }
 
   connected = true;
+  // New session established — allow the next teardown to notify listeners again.
+  disconnectNotified = false;
 
   port.onMessage.addListener(handleMessage);
   port.onDisconnect.addListener(handleDisconnect);
@@ -115,6 +121,11 @@ export function disconnect(): void {
   svelteVersion = null;
   svelteUntested = false;
   messages = [];
+
+  // Notify disconnect listeners (e.g., component store reset) so a subsequent
+  // connect() does not inherit the previous session's stale state. Guarded so it
+  // fires at most once per teardown even if handleDisconnect() already ran.
+  notifyDisconnect();
 }
 
 // -- Internal handlers --
@@ -145,12 +156,23 @@ function handleDisconnect(): void {
   svelteUntested = false;
 
   // Notify disconnect listeners (e.g., component store reset)
-  for (const listener of [...disconnectListeners]) {
-    listener();
-  }
+  notifyDisconnect();
 
   // Auto-reconnect after delay (handles service worker restarts)
   scheduleReconnect();
+}
+
+// Notifies disconnect listeners exactly once per teardown. Both disconnect() and
+// handleDisconnect() route through here; the disconnectNotified flag prevents a
+// double-notification if both run for the same session (reset in connect()).
+function notifyDisconnect(): void {
+  if (disconnectNotified) return;
+  disconnectNotified = true;
+
+  // Copy to handle mid-iteration mutation of the subscriber list.
+  for (const listener of [...disconnectListeners]) {
+    listener();
+  }
 }
 
 function scheduleReconnect(): void {

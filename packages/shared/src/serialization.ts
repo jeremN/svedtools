@@ -131,67 +131,75 @@ function serializeInner(
   if (seen.has(raw)) {
     return { __type: 'circular', path } satisfies SerializedCircularRef;
   }
+  // `seen` is stack-scoped: `raw` is added before we descend into this value
+  // and removed (in the `finally` below) once we unwind. This way `seen` only
+  // ever tracks the current recursion path, so a node referenced by two
+  // sibling branches (a diamond/DAG, not a cycle) is serialized normally
+  // instead of being mistaken for a circular reference.
   seen.add(raw);
+  try {
+    // DOM Node
+    if (isDomNode(raw)) {
+      return serializeDomNode(raw as unknown as Element);
+    }
 
-  // DOM Node
-  if (isDomNode(raw)) {
-    return serializeDomNode(raw as unknown as Element);
+    // Depth limit
+    if (depth >= opts.maxDepth) {
+      return {
+        __type: 'truncated',
+        reason: `Max depth (${opts.maxDepth}) reached`,
+      } satisfies SerializedTruncated;
+    }
+
+    // Array
+    if (Array.isArray(raw)) {
+      return serializeArray(raw, depth, opts, seen, path);
+    }
+
+    // Map
+    if (raw instanceof Map) {
+      const entries = Array.from(raw.entries()).slice(0, opts.maxObjectPreview);
+      const preview = `Map(${raw.size}) {${entries.map(([k, v]) => `${String(k)} => ${previewValue(v)}`).join(', ')}}`;
+      return {
+        __type: 'object',
+        preview,
+        childCount: raw.size,
+        path: path || undefined,
+      } satisfies SerializedObject;
+    }
+
+    // Set
+    if (raw instanceof Set) {
+      const items = Array.from(raw).slice(0, opts.maxArrayPreview);
+      const preview = `Set(${raw.size}) {${items.map(previewValue).join(', ')}}`;
+      return {
+        __type: 'object',
+        preview,
+        childCount: raw.size,
+        path: path || undefined,
+      } satisfies SerializedObject;
+    }
+
+    // Date
+    if (raw instanceof Date) {
+      return raw.toISOString();
+    }
+
+    // RegExp
+    if (raw instanceof RegExp) {
+      return raw.toString();
+    }
+
+    // Error
+    if (raw instanceof Error) {
+      return `${raw.name}: ${raw.message}`;
+    }
+
+    // Plain object
+    return serializeObject(raw, depth, opts, seen, path);
+  } finally {
+    seen.delete(raw);
   }
-
-  // Depth limit
-  if (depth >= opts.maxDepth) {
-    return {
-      __type: 'truncated',
-      reason: `Max depth (${opts.maxDepth}) reached`,
-    } satisfies SerializedTruncated;
-  }
-
-  // Array
-  if (Array.isArray(raw)) {
-    return serializeArray(raw, depth, opts, seen, path);
-  }
-
-  // Map
-  if (raw instanceof Map) {
-    const entries = Array.from(raw.entries()).slice(0, opts.maxObjectPreview);
-    const preview = `Map(${raw.size}) {${entries.map(([k, v]) => `${String(k)} => ${previewValue(v)}`).join(', ')}}`;
-    return {
-      __type: 'object',
-      preview,
-      childCount: raw.size,
-      path: path || undefined,
-    } satisfies SerializedObject;
-  }
-
-  // Set
-  if (raw instanceof Set) {
-    const items = Array.from(raw).slice(0, opts.maxArrayPreview);
-    const preview = `Set(${raw.size}) {${items.map(previewValue).join(', ')}}`;
-    return {
-      __type: 'object',
-      preview,
-      childCount: raw.size,
-      path: path || undefined,
-    } satisfies SerializedObject;
-  }
-
-  // Date
-  if (raw instanceof Date) {
-    return raw.toISOString();
-  }
-
-  // RegExp
-  if (raw instanceof RegExp) {
-    return raw.toString();
-  }
-
-  // Error
-  if (raw instanceof Error) {
-    return `${raw.name}: ${raw.message}`;
-  }
-
-  // Plain object
-  return serializeObject(raw, depth, opts, seen, path);
 }
 
 function serializeArray(
