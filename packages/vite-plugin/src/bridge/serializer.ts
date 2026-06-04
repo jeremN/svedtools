@@ -106,6 +106,98 @@ export function previewVal(v: unknown): string {
   return '{...}';
 }
 
+const MAX_CHILDREN = 100;
+
+/**
+ * Navigate a LIVE value along `path` and serialize one level of children.
+ * Used by the bridge's state:expand handler for lazy drill-down. Unwraps Svelte
+ * state proxies at each step via Compat. Returns null when `root` or the
+ * navigated value is not an object (e.g. primitive, null) or when the path
+ * can't be navigated; a throwing getter degrades to a `truncated` child rather
+ * than aborting the whole expansion.
+ */
+export function serializeChildrenAtPath(root: unknown, path: string[]): Record<string, unknown> | null {
+  let current: unknown = root;
+
+  for (const key of path) {
+    if (current === null || typeof current !== 'object') return null;
+    const container = Compat.unwrapStateProxy(current as object);
+    try {
+      if (Array.isArray(container)) {
+        const idx = Number(key);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= container.length) return null;
+        current = container[idx];
+      } else if (container instanceof Map) {
+        if (!container.has(key)) return null;
+        current = container.get(key);
+      } else if (container instanceof Set) {
+        const idx = Number(key);
+        const items = Array.from(container);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= items.length) return null;
+        current = items[idx];
+      } else {
+        current = (container as Record<string, unknown>)[key];
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  if (current === null || typeof current !== 'object') return null;
+  const container = Compat.unwrapStateProxy(current as object);
+  const result: Record<string, unknown> = {};
+
+  if (Array.isArray(container)) {
+    for (let i = 0; i < Math.min(container.length, MAX_CHILDREN); i++) {
+      try {
+        result[String(i)] = safeSerialize(container[i]);
+      } catch {
+        result[String(i)] = { __type: 'truncated', reason: 'getter threw' };
+      }
+    }
+    return result;
+  }
+  if (container instanceof Map) {
+    let i = 0;
+    for (const [k, v] of container) {
+      if (i++ >= MAX_CHILDREN) break;
+      try {
+        result[String(k)] = safeSerialize(v);
+      } catch {
+        result[String(k)] = { __type: 'truncated', reason: 'getter threw' };
+      }
+    }
+    return result;
+  }
+  if (container instanceof Set) {
+    let i = 0;
+    for (const v of container) {
+      if (i >= MAX_CHILDREN) break;
+      try {
+        result[String(i)] = safeSerialize(v);
+      } catch {
+        result[String(i)] = { __type: 'truncated', reason: 'getter threw' };
+      }
+      i++;
+    }
+    return result;
+  }
+  let keys: string[];
+  try {
+    keys = Object.keys(container as object);
+  } catch {
+    return null;
+  }
+  for (const k of keys.slice(0, MAX_CHILDREN)) {
+    try {
+      result[k] = safeSerialize((container as Record<string, unknown>)[k]);
+    } catch {
+      result[k] = { __type: 'truncated', reason: 'getter threw' };
+    }
+  }
+  return result;
+}
+
 export function summarizeDomMutation(m: MutationRecord): string {
   if (m.type === 'attributes') {
     const tag = (m.target as Element).tagName?.toLowerCase() || '';
