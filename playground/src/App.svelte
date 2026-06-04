@@ -20,10 +20,7 @@
     <TodoList />
   </section>
 
-  <section>
-    <h2>Nested State</h2>
-    <NestedState />
-  </section>
+  <NestedState />
 
   <section>
     <h2>Effect Chain</h2>
