@@ -193,11 +193,23 @@ function instrumentUserEffect(s: MagicString, node: any): void {
 
 /**
  * $.set(signal, value)
- * → (preMutation(signal), $.set(signal, value), onMutation(signal))
+ * → (() => { const __sig = signal; window.__svelte_devtools__?.preMutation(__sig); const __r = $.set(__sig, value); window.__svelte_devtools__?.onMutation(__sig); return __r; })()
  *
  * preMutation captures the old value (signal.v) before set runs.
  * onMutation is called AFTER set to read the new value from the signal.
  * This enables "Why Did This Update?" tracing by comparing old vs new.
+ *
+ * The signal target is bound to a `__sig` temp and evaluated EXACTLY ONCE,
+ * then reused for pre/onMutation and rewritten in place inside the original
+ * call. A naive comma-expression would splice the target three times, so a
+ * non-trivial target (e.g. a class `$state` member `this.#count`, or an index
+ * expression with side effects) would be re-evaluated — fragile even when the
+ * expression happens to be pure. We `update` only the target range (args[0]);
+ * the value arg (args[1]) is left untouched so inner instrumentation there
+ * (e.g. a nested `$.update`) still applies. Overwriting args[0] is safe: in
+ * compiled Svelte output a mutation target is a plain signal reference and
+ * never itself contains instrumentable `$.method()` calls, so no other
+ * instrumenter touches that range.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentSet(s: MagicString, node: any): void {
@@ -206,17 +218,28 @@ function instrumentSet(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
-  // Capture old value before set, then notify after set
-  s.prependLeft(node.start, `(window.__svelte_devtools__?.preMutation(${signalArg}), `);
-  s.appendRight(node.end, `, window.__svelte_devtools__?.onMutation(${signalArg}))`);
+  // Bind the target once, rewrite it in place, capture old/new around set
+  s.prependLeft(
+    node.start,
+    `(() => { const __sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sig); const __r = `,
+  );
+  s.update(args[0].start, args[0].end, '__sig');
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sig); return __r; })()`);
 }
 
 /**
  * $.update(signal) or $.update(signal, -1)
- * → (() => { preMutation(signal); const __r = $.update(signal, -1); onMutation(signal); return __r; })()
+ * → (() => { const __sig = signal; preMutation(__sig); const __r = $.update(__sig, -1); onMutation(__sig); return __r; })()
  *
  * IIFE preserves $.update's return value (used in `return $.update(count, -1)`)
  * while capturing pre/post mutation values for update tracing.
+ *
+ * Like instrumentSet, the signal target is bound to `__sig` and evaluated
+ * EXACTLY ONCE, then rewritten in place inside the original call so a
+ * non-trivial target isn't re-evaluated. Overwriting args[0] is safe — a
+ * compiled mutation target never contains instrumentable `$.method()` calls,
+ * so no other instrumenter touches that range. Any remaining args (e.g. the
+ * `-1` delta in args[1]) are left untouched.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentUpdate(s: MagicString, node: any): void {
@@ -225,9 +248,13 @@ function instrumentUpdate(s: MagicString, node: any): void {
 
   const signalArg = s.slice(args[0].start, args[0].end);
 
-  // IIFE preserves $.update return value while capturing pre/post mutation
-  s.prependLeft(node.start, `(() => { window.__svelte_devtools__?.preMutation(${signalArg}); const __r = `);
-  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(${signalArg}); return __r; })()`);
+  // Bind the target once, rewrite it in place; IIFE preserves $.update's return value
+  s.prependLeft(
+    node.start,
+    `(() => { const __sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sig); const __r = `,
+  );
+  s.update(args[0].start, args[0].end, '__sig');
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sig); return __r; })()`);
 }
 
 /**
