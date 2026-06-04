@@ -91,6 +91,7 @@ describe('isDevToolsMessage', () => {
       'component:updated',
       'component:tree',
       'state:snapshot',
+      'state:expanded',
       'graph:snapshot',
       'graph:update',
       'profiler:data',
@@ -111,6 +112,7 @@ describe('isDevToolsMessage', () => {
     const panelTypes = [
       'inspect:component',
       'state:edit',
+      'state:expand',
       'profiler:start',
       'profiler:stop',
       'graph:request',

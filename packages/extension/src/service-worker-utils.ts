@@ -5,6 +5,7 @@ export const VALID_BRIDGE_TYPES = new Set([
   'component:updated',
   'component:tree',
   'state:snapshot',
+  'state:expanded',
   'graph:snapshot',
   'graph:update',
   'profiler:data',
@@ -15,6 +16,7 @@ export const VALID_BRIDGE_TYPES = new Set([
 export const VALID_PANEL_TYPES = new Set([
   'inspect:component',
   'state:edit',
+  'state:expand',
   'profiler:start',
   'profiler:stop',
   'graph:request',

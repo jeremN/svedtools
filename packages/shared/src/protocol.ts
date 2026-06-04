@@ -39,6 +39,14 @@ export interface StateSnapshotMessage {
   }>;
 }
 
+export interface StateExpandedMessage {
+  type: 'state:expanded';
+  rootId: NodeId;
+  path: string[];
+  /** One level of children keyed by key/index; null when the root/path can't be resolved. */
+  children: Record<string, SerializedValue> | null;
+}
+
 export interface GraphSnapshotMessage {
   type: 'graph:snapshot';
   nodes: ReactiveGraphNode[];
@@ -94,6 +102,7 @@ export type BridgeToPanelMessage =
   | ComponentUpdatedMessage
   | ComponentTreeSnapshotMessage
   | StateSnapshotMessage
+  | StateExpandedMessage
   | GraphSnapshotMessage
   | GraphUpdateMessage
   | ProfilerDataMessage
@@ -112,6 +121,14 @@ export interface StateEditRequest {
   signalId: NodeId;
   path: string[];
   value: unknown;
+}
+
+export interface StateExpandRequest {
+  type: 'state:expand';
+  /** Any bridge-tracked signal/derived id (shared between the State snapshot and the graph). */
+  rootId: NodeId;
+  /** Keys/indices from the root value down to the node being opened. */
+  path: string[];
 }
 
 export interface ProfilerStartRequest {
@@ -144,6 +161,7 @@ export interface OpenInEditorRequest {
 export type PanelToBridgeMessage =
   | InspectComponentRequest
   | StateEditRequest
+  | StateExpandRequest
   | ProfilerStartRequest
   | ProfilerStopRequest
   | GraphRequestMessage
@@ -172,6 +190,8 @@ const VALID_MESSAGE_TYPES = new Set([
   'component:tree',
   'state:snapshot',
   'state:edit',
+  'state:expand',
+  'state:expanded',
   'graph:snapshot',
   'graph:update',
   'graph:request',
