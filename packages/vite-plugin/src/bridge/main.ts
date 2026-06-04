@@ -14,7 +14,7 @@
  */
 
 import { Compat, detectSvelteVersion } from './compat.js';
-import { safeSerialize, summarizeDomMutation } from './serializer.js';
+import { safeSerialize, summarizeDomMutation, serializeChildrenAtPath } from './serializer.js';
 import { showHighlight, findDomElementsByFilename } from './highlight.js';
 import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types.js';
 
@@ -61,6 +61,8 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   const signalMap = new Map<Value, SignalMeta>();
   const effectMap = new Map<string, EffectMeta>();
   const stableReactionIds = new WeakMap<Reaction, string>();
+  const idToSignal = new Map<string, Value>();
+  const idToReaction = new Map<string, WeakRef<Reaction>>();
 
   // -- Profiling --
   const MAX_PROFILING_ENTRIES = 10000;
@@ -251,6 +253,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         componentId: owner,
         type: signalType || 'state',
       });
+      idToSignal.set(id, signal);
       if (owner) {
         const node = componentMap.get(owner);
         if (node) node.stateIds.push(id);
@@ -410,11 +413,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
 
         for (const reaction of Compat.getReactions(signal)) {
           if (!reaction) continue;
-          let reactionId = stableReactionIds.get(reaction);
-          if (!reactionId) {
-            reactionId = genId();
-            stableReactionIds.set(reaction, reactionId);
-          }
+          const reactionId = getStableReactionId(reaction);
 
           const isDerived = Compat.isDerived(reaction);
           const reactionType = isDerived ? 'derived' : 'effect';
@@ -493,6 +492,37 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     },
   };
 
+  function getStableReactionId(reaction: Reaction): string {
+    let rid = stableReactionIds.get(reaction);
+    if (!rid) {
+      rid = genId();
+      stableReactionIds.set(reaction, rid);
+      idToReaction.set(rid, new WeakRef(reaction));
+    }
+    return rid;
+  }
+
+  /** Resolve a panel-supplied rootId to its current live value (signal .v or derived value). */
+  function resolveLiveValue(rootId: string): { ok: boolean; value: unknown } {
+    const signal = idToSignal.get(rootId);
+    if (signal) {
+      try {
+        return { ok: true, value: Compat.getValue(signal) };
+      } catch {
+        return { ok: false, value: null };
+      }
+    }
+    const reaction = idToReaction.get(rootId)?.deref();
+    if (reaction && Compat.isDerived(reaction)) {
+      try {
+        return { ok: true, value: Compat.getDerivedValue(reaction) };
+      } catch {
+        return { ok: false, value: null };
+      }
+    }
+    return { ok: false, value: null };
+  }
+
   function buildChainFromSignal(signal: Value): unknown[] {
     const steps: unknown[] = [];
     const reactions = Compat.getReactions(signal);
@@ -527,11 +557,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           }
         }
 
-        let reactionSignalId = stableReactionIds.get(r);
-        if (!reactionSignalId) {
-          reactionSignalId = genId();
-          stableReactionIds.set(r, reactionSignalId);
-        }
+        const reactionSignalId = getStableReactionId(r);
 
         steps.push({
           signalId: reactionSignalId,
@@ -647,6 +673,16 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           const rects = els.map((el) => el.getBoundingClientRect());
           showHighlight(rects);
         }
+        break;
+      }
+      case 'state:expand': {
+        const expandMsg = msg as { rootId: string; path: (string | number)[] };
+        const rootId = expandMsg.rootId;
+        const rawPath = Array.isArray(expandMsg.path) ? expandMsg.path : [];
+        const path = rawPath.map(String);
+        const resolved = resolveLiveValue(rootId);
+        const children = resolved.ok ? serializeChildrenAtPath(resolved.value, path) : null;
+        emit({ type: 'state:expanded', rootId, path: rawPath, children });
         break;
       }
     }
