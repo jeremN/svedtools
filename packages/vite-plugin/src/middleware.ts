@@ -1,6 +1,6 @@
 import type { ViteDevServer } from 'vite';
 import { readFile, realpath } from 'node:fs/promises';
-import { resolve, isAbsolute } from 'node:path';
+import { resolve, isAbsolute, extname, basename } from 'node:path';
 
 /**
  * Validates that a file path is within the project root,
@@ -14,6 +14,35 @@ async function isWithinRoot(filePath: string, root: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Extensions the panel can meaningfully display as source. */
+const ALLOWED_SOURCE_EXTENSIONS = new Set([
+  '.svelte',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.jsx',
+  '.ts',
+  '.mts',
+  '.cts',
+  '.tsx',
+  '.css',
+  '.scss',
+  '.sass',
+  '.less',
+]);
+
+/**
+ * Secure-by-default positive allowlist: only recognized source files may be
+ * read. This keeps get-source from being used to exfiltrate `.env`, keys,
+ * `.git/*`, etc. — the things Vite's own `server.fs.deny` normally protects —
+ * since we go straight to the filesystem and bypass that layer. Dotfiles are
+ * rejected outright as defense-in-depth on top of the extension check.
+ */
+export function isAllowedSourceFile(filePath: string): boolean {
+  if (basename(filePath).startsWith('.')) return false;
+  return ALLOWED_SOURCE_EXTENSIONS.has(extname(filePath).toLowerCase());
 }
 
 /**
@@ -32,8 +61,13 @@ export function createDevtoolsMiddleware(server: ViteDevServer): void {
 
     if (!(await isWithinRoot(filePath, root))) return;
 
+    // line/column arrive untrusted over the wire; coerce to safe integers
+    // before interpolating them raw into the query string.
+    const safeLine = Number.isInteger(line) ? line : 1;
+    const safeColumn = Number.isInteger(column) ? column : 1;
+
     // Vite exposes __open-in-editor via middleware
-    const url = `/__open-in-editor?file=${encodeURIComponent(file)}&line=${line}&column=${column}`;
+    const url = `/__open-in-editor?file=${encodeURIComponent(file)}&line=${safeLine}&column=${safeColumn}`;
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const req = { url, method: 'GET', headers: {} } as any;
     const res = {
@@ -61,6 +95,14 @@ export function createDevtoolsMiddleware(server: ViteDevServer): void {
 
     if (!(await isWithinRoot(filePath, root))) {
       client.send('svelte-devtools:source', { error: 'Path outside project root' });
+      return;
+    }
+
+    // Source-only allowlist: the panel only ever displays source files, so
+    // refuse anything else. This stops get-source from reading `.env`, keys,
+    // `.git/*`, etc. that Vite's `server.fs.deny` normally guards.
+    if (!isAllowedSourceFile(filePath)) {
+      client.send('svelte-devtools:source', { error: 'File type not allowed' });
       return;
     }
 
