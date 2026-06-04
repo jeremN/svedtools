@@ -17,6 +17,7 @@
 ## Task 1: Protocol messages + service-worker allowlists
 
 **Files:**
+
 - Modify: `packages/shared/src/protocol.ts`
 - Modify: `packages/extension/src/service-worker-utils.ts`
 - Test: `packages/shared/src/protocol.test.ts`
@@ -28,11 +29,17 @@ import { isDevToolsMessage } from './protocol.js';
 
 describe('isDevToolsMessage — state:expand drill-down', () => {
   it('accepts a state:expand request envelope', () => {
-    const wire = { source: 'svelte-devtools-pro', payload: { type: 'state:expand', rootId: 'sdt-1', path: ['a', '0'] } };
+    const wire = {
+      source: 'svelte-devtools-pro',
+      payload: { type: 'state:expand', rootId: 'sdt-1', path: ['a', '0'] },
+    };
     expect(isDevToolsMessage(wire)).toBe(true);
   });
   it('accepts a state:expanded response envelope', () => {
-    const wire = { source: 'svelte-devtools-pro', payload: { type: 'state:expanded', rootId: 'sdt-1', path: [], children: {} } };
+    const wire = {
+      source: 'svelte-devtools-pro',
+      payload: { type: 'state:expanded', rootId: 'sdt-1', path: [], children: {} },
+    };
     expect(isDevToolsMessage(wire)).toBe(true);
   });
 });
@@ -95,6 +102,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 2: Bridge `serializeChildrenAtPath` (page-context path navigation)
 
 **Files:**
+
 - Modify: `packages/vite-plugin/src/bridge/serializer.ts`
 - Test: `packages/vite-plugin/src/bridge/serializer.test.ts`
 
@@ -128,7 +136,12 @@ describe('serializeChildrenAtPath', () => {
     expect(serializeChildrenAtPath({ a: 1 }, ['a', 'b'])).toBeNull(); // a is a primitive
   });
   it('does not throw on a hostile getter — yields a truncated child', () => {
-    const obj = { get boom() { throw new Error('no'); }, ok: 1 };
+    const obj = {
+      get boom() {
+        throw new Error('no');
+      },
+      ok: 1,
+    };
     const out = serializeChildrenAtPath(obj, []) as Record<string, { __type?: string }>;
     expect(out.ok).toBe(1);
     expect(out.boom.__type).toBe('truncated');
@@ -187,7 +200,11 @@ export function serializeChildrenAtPath(root: unknown, path: string[]): Record<s
 
   if (Array.isArray(container)) {
     for (let i = 0; i < Math.min(container.length, MAX_CHILDREN); i++) {
-      try { result[String(i)] = safeSerialize(container[i]); } catch { result[String(i)] = truncated; }
+      try {
+        result[String(i)] = safeSerialize(container[i]);
+      } catch {
+        result[String(i)] = truncated;
+      }
     }
     return result;
   }
@@ -195,7 +212,11 @@ export function serializeChildrenAtPath(root: unknown, path: string[]): Record<s
     let i = 0;
     for (const [k, v] of container) {
       if (i++ >= MAX_CHILDREN) break;
-      try { result[String(k)] = safeSerialize(v); } catch { result[String(k)] = truncated; }
+      try {
+        result[String(k)] = safeSerialize(v);
+      } catch {
+        result[String(k)] = truncated;
+      }
     }
     return result;
   }
@@ -203,15 +224,27 @@ export function serializeChildrenAtPath(root: unknown, path: string[]): Record<s
     let i = 0;
     for (const v of container) {
       if (i >= MAX_CHILDREN) break;
-      try { result[String(i)] = safeSerialize(v); } catch { result[String(i)] = truncated; }
+      try {
+        result[String(i)] = safeSerialize(v);
+      } catch {
+        result[String(i)] = truncated;
+      }
       i++;
     }
     return result;
   }
   let keys: string[];
-  try { keys = Object.keys(container as object); } catch { return null; }
+  try {
+    keys = Object.keys(container as object);
+  } catch {
+    return null;
+  }
   for (const k of keys.slice(0, MAX_CHILDREN)) {
-    try { result[k] = safeSerialize((container as Record<string, unknown>)[k]); } catch { result[k] = truncated; }
+    try {
+      result[k] = safeSerialize((container as Record<string, unknown>)[k]);
+    } catch {
+      result[k] = truncated;
+    }
   }
   return result;
 }
@@ -234,6 +267,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 3: Bridge — id resolver + `state:expand` handler
 
 **Files:**
+
 - Modify: `packages/vite-plugin/src/bridge/main.ts`
 
 No unit test (the bridge is a page-context IIFE with no harness; covered by Task 2's serializer tests and Task 9's manual verification). Verification is `tsc` + the build.
@@ -247,40 +281,40 @@ import { safeSerialize, summarizeDomMutation, serializeChildrenAtPath } from './
 - [ ] **Step 2: Add reverse-lookup maps** — next to `const signalMap = ...` / `const stableReactionIds = ...` (around lines 61–63):
 
 ```ts
-  const idToSignal = new Map<string, Value>();
-  const idToReaction = new Map<string, Reaction>();
+const idToSignal = new Map<string, Value>();
+const idToReaction = new Map<string, Reaction>();
 ```
 
 - [ ] **Step 3: Populate `idToSignal` in `registerSignal`** — in `registerSignal`, right after `signalMap.set(signal, { ... })` (around line 248), add:
 
 ```ts
-      idToSignal.set(id, signal);
+idToSignal.set(id, signal);
 ```
 
 - [ ] **Step 4: Centralize reaction-id minting** — add a helper near `buildGraph` so both `buildGraph` and `buildChainFromSignal` register reaction ids. Add:
 
 ```ts
-  function getStableReactionId(reaction: Reaction): string {
-    let rid = stableReactionIds.get(reaction);
-    if (!rid) {
-      rid = genId();
-      stableReactionIds.set(reaction, rid);
-    }
-    idToReaction.set(rid, reaction);
-    return rid;
+function getStableReactionId(reaction: Reaction): string {
+  let rid = stableReactionIds.get(reaction);
+  if (!rid) {
+    rid = genId();
+    stableReactionIds.set(reaction, rid);
   }
+  idToReaction.set(rid, reaction);
+  return rid;
+}
 ```
 
 Then in `buildGraph` replace the inline mint (lines ~413–417):
 
 ```ts
-          const reactionId = getStableReactionId(reaction);
+const reactionId = getStableReactionId(reaction);
 ```
 
 …and in `buildChainFromSignal` replace the inline mint (lines ~530–534):
 
 ```ts
-        const reactionSignalId = getStableReactionId(r);
+const reactionSignalId = getStableReactionId(r);
 ```
 
 (Remove the now-redundant `let rid = stableReactionIds.get(...) ... stableReactionIds.set(...)` blocks at both sites.)
@@ -288,18 +322,26 @@ Then in `buildGraph` replace the inline mint (lines ~413–417):
 - [ ] **Step 5: Add `resolveLiveValue`** — add near `buildGraph`:
 
 ```ts
-  /** Resolve a panel-supplied rootId to its current live value (signal .v or derived value). */
-  function resolveLiveValue(rootId: string): { ok: boolean; value: unknown } {
-    const signal = idToSignal.get(rootId);
-    if (signal) {
-      try { return { ok: true, value: Compat.getValue(signal) }; } catch { return { ok: false, value: null }; }
+/** Resolve a panel-supplied rootId to its current live value (signal .v or derived value). */
+function resolveLiveValue(rootId: string): { ok: boolean; value: unknown } {
+  const signal = idToSignal.get(rootId);
+  if (signal) {
+    try {
+      return { ok: true, value: Compat.getValue(signal) };
+    } catch {
+      return { ok: false, value: null };
     }
-    const reaction = idToReaction.get(rootId);
-    if (reaction && Compat.isDerived(reaction)) {
-      try { return { ok: true, value: Compat.getDerivedValue(reaction) }; } catch { return { ok: false, value: null }; }
-    }
-    return { ok: false, value: null };
   }
+  const reaction = idToReaction.get(rootId);
+  if (reaction && Compat.isDerived(reaction)) {
+    try {
+      return { ok: true, value: Compat.getDerivedValue(reaction) };
+    } catch {
+      return { ok: false, value: null };
+    }
+  }
+  return { ok: false, value: null };
+}
 ```
 
 - [ ] **Step 6: Handle `state:expand`** — add a case to the `switch (msg.type)` in the postMessage listener (after the `highlight:component` case, around line 651):
@@ -332,6 +374,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 4: Panel expansion store
 
 **Files:**
+
 - Create: `packages/extension/src/panel/lib/expansion.svelte.ts`
 
 Verification: `svelte-check` + Task 9. No unit test (no extension harness).
@@ -432,6 +475,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 5: Reusable `ValueTree.svelte`
 
 **Files:**
+
 - Create: `packages/extension/src/panel/components/ValueTree.svelte`
 
 - [ ] **Step 1: Create the component** (recursive via a self-referencing snippet + nested `<ValueTree>` for children):
@@ -499,19 +543,50 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 </span>
 
 <style>
-  .vt { font-family: monospace; font-size: 12px; }
-  .vt-toggle {
-    background: none; border: none; color: #888; cursor: pointer;
-    font-size: 9px; padding: 0 2px; width: 14px;
+  .vt {
+    font-family: monospace;
+    font-size: 12px;
   }
-  .vt-spacer { display: inline-block; width: 14px; }
-  .vt-preview { color: #ccc; }
-  .vt-complex { color: #9cc; }
-  .vt-children { margin-left: 14px; border-left: 1px solid #2a2a2a; padding-left: 6px; }
-  .vt-child { display: flex; gap: 6px; align-items: baseline; }
-  .vt-key { color: #c586c0; flex-shrink: 0; }
-  .vt-meta { color: #666; font-style: italic; }
-  .vt-error { color: #ce9178; }
+  .vt-toggle {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 9px;
+    padding: 0 2px;
+    width: 14px;
+  }
+  .vt-spacer {
+    display: inline-block;
+    width: 14px;
+  }
+  .vt-preview {
+    color: #ccc;
+  }
+  .vt-complex {
+    color: #9cc;
+  }
+  .vt-children {
+    margin-left: 14px;
+    border-left: 1px solid #2a2a2a;
+    padding-left: 6px;
+  }
+  .vt-child {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .vt-key {
+    color: #c586c0;
+    flex-shrink: 0;
+  }
+  .vt-meta {
+    color: #666;
+    font-style: italic;
+  }
+  .vt-error {
+    color: #ce9178;
+  }
 </style>
 ```
 
@@ -532,6 +607,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 6: Wire `ValueTree` into the State inspector
 
 **Files:**
+
 - Modify: `packages/extension/src/panel/components/StateInspector.svelte`
 
 - [ ] **Step 1: Replace the inline value display** — in `StateInspector.svelte`:
@@ -540,12 +616,12 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
   3. Replace the signal value cell:
 
 ```svelte
-          <span class="signal-value">
-            <ValueTree rootId={signal.id} value={signal.value} />
-          </span>
+<span class="signal-value">
+  <ValueTree rootId={signal.id} value={signal.value} />
+</span>
 ```
 
-  4. Reset expansion when the selected component changes (add after the existing `$derived`s):
+4. Reset expansion when the selected component changes (add after the existing `$derived`s):
 
 ```svelte
   $effect(() => {
@@ -573,6 +649,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 7: Reactivity-graph selected-node detail panel
 
 **Files:**
+
 - Modify: `packages/extension/src/panel/components/ReactivityGraph.svelte`
 
 - [ ] **Step 1: Add a detail panel that hosts `ValueTree`** — in `ReactivityGraph.svelte`:
@@ -587,23 +664,23 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
   });
 ```
 
-  3. Add the panel markup just before the closing `</div>` of `.reactivity-graph` (after the tooltip block):
+3. Add the panel markup just before the closing `</div>` of `.reactivity-graph` (after the tooltip block):
 
 ```svelte
-    {#if selectedNode && selectedNode.value !== null && selectedNode.value !== undefined}
-      <div class="detail-panel">
-        <div class="detail-header">
-          <span class="detail-label">{selectedNode.label ?? selectedNode.type}</span>
-          <span class="detail-type">{selectedNode.type}</span>
-        </div>
-        <div class="detail-value">
-          <ValueTree rootId={selectedNode.id} value={selectedNode.value} />
-        </div>
-      </div>
-    {/if}
+{#if selectedNode && selectedNode.value !== null && selectedNode.value !== undefined}
+  <div class="detail-panel">
+    <div class="detail-header">
+      <span class="detail-label">{selectedNode.label ?? selectedNode.type}</span>
+      <span class="detail-type">{selectedNode.type}</span>
+    </div>
+    <div class="detail-value">
+      <ValueTree rootId={selectedNode.id} value={selectedNode.value} />
+    </div>
+  </div>
+{/if}
 ```
 
-  4. Add styles:
+4. Add styles:
 
 ```svelte
   .detail-panel {
@@ -635,6 +712,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 8: Auto-refresh wiring (live trees + top-level)
 
 **Files:**
+
 - Modify: `packages/extension/src/panel/main.ts`
 
 - [ ] **Step 1: Register the expansion store + auto-refresh subscriber** — update `main.ts`:
@@ -693,6 +771,7 @@ GIT_COMMITTER_NAME='Jérémie Néhlil' GIT_COMMITTER_EMAIL='jeremne@gmail.com' g
 ## Task 9: Playground fixture + manual real-browser verification
 
 **Files:**
+
 - Create: `playground/src/lib/NestedState.svelte`
 - Modify: a playground route/page to mount it (match the existing demo-page pattern — inspect `playground/src` to find how demo pages are registered, e.g. a routes list or `App.svelte`).
 
@@ -707,7 +786,12 @@ The extension panel can't be driven by the existing Playwright harness (it tests
     address: { city: 'London', geo: { lat: 51.5, lng: -0.1 } },
     tags: ['admin', 'beta'],
   });
-  let scores = $state(new Map<string, number>([['math', 90], ['art', 75]]));
+  let scores = $state(
+    new Map<string, number>([
+      ['math', 90],
+      ['art', 75],
+    ]),
+  );
 
   function mutate() {
     user.address.geo.lat = Math.round((user.address.geo.lat + 0.1) * 10) / 10;
@@ -738,11 +822,12 @@ node scripts/launch-extension-demo.mjs   # isolated Chrome with the extension pr
 ```
 
 Confirm, with DevTools → the panel open on the Nested state page:
-  - [ ] State inspector shows `user` as an expandable object; clicking ▶ fetches and shows `name/address/tags`; expanding `address` → `geo` → `lat/lng` works (each level lazily loads).
-  - [ ] `scores` shows `Map(2)` and expands to `math/art`.
-  - [ ] Clicking "Mutate nested" updates the open `geo.lat` and `scores.math` **without collapsing** (live refresh), and the top-level `user`/`scores` previews update too.
-  - [ ] In the Reactivity Graph, selecting the `user`/`scores` source node shows the detail panel with the same expandable tree.
-  - [ ] Collapsing a node and re-expanding re-fetches; selecting a different component resets expansion.
+
+- [ ] State inspector shows `user` as an expandable object; clicking ▶ fetches and shows `name/address/tags`; expanding `address` → `geo` → `lat/lng` works (each level lazily loads).
+- [ ] `scores` shows `Map(2)` and expands to `math/art`.
+- [ ] Clicking "Mutate nested" updates the open `geo.lat` and `scores.math` **without collapsing** (live refresh), and the top-level `user`/`scores` previews update too.
+- [ ] In the Reactivity Graph, selecting the `user`/`scores` source node shows the detail panel with the same expandable tree.
+- [ ] Collapsing a node and re-expanding re-fetches; selecting a different component resets expansion.
 
 - [ ] **Step 5: Run the full gate suite**
 

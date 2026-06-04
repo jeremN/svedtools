@@ -12,7 +12,7 @@ Serialized component state is sent to the panel as a **shallow one-level preview
 
 **Truly lazy, request-per-expansion.** Live values live in the page (the bridge); the panel holds only previews. So the panel cannot expand locally — it requests children for a specific `(rootId, path)` and the bridge navigates the **live** value and serializes one level back.
 
-**One mechanism, two views.** Both views reference the *same* bridge-tracked reactive ids: a source signal's id is identical in the State snapshot (`signalMap` meta id) and in the graph (`buildGraph` uses that same id for source nodes). Deriveds in the graph use reaction ids. So a single `rootId`-keyed expand mechanism serves both the State inspector and the Reactivity Graph. Effect nodes carry no value → not expandable.
+**One mechanism, two views.** Both views reference the _same_ bridge-tracked reactive ids: a source signal's id is identical in the State snapshot (`signalMap` meta id) and in the graph (`buildGraph` uses that same id for source nodes). Deriveds in the graph use reaction ids. So a single `rootId`-keyed expand mechanism serves both the State inspector and the Reactivity Graph. Effect nodes carry no value → not expandable.
 
 This is the design the existing scaffolding (`SerializedObject.path`, `SerializeOptions.basePath`, `serializeAtPath`) was built for.
 
@@ -37,8 +37,8 @@ Graph detail ───┘   (panel)        │            ◀─ state:expanded 
 // panel → bridge
 export interface StateExpandRequest {
   type: 'state:expand';
-  rootId: NodeId;     // any bridge-tracked signal/derived id (shared across both views)
-  path: string[];     // keys/indices from the root value to the node being opened
+  rootId: NodeId; // any bridge-tracked signal/derived id (shared across both views)
+  path: string[]; // keys/indices from the root value to the node being opened
 }
 
 // bridge → panel
@@ -57,6 +57,7 @@ export interface StateExpandedMessage {
 ### 2. Bridge — `vite-plugin/src/bridge/serializer.ts`
 
 Add `serializeChildrenAtPath(root: unknown, path: string[]): Record<string, SerializedValue> | null`:
+
 - Navigate `root` along `path`, calling `Compat.unwrapStateProxy` at each object level (so live Svelte `$state` proxies unwrap). Array indices via `Number(key)` with bounds checks.
 - At the target, return one level of children keyed by key, each via `safeSerialize(child)` (shallow preview — drilling deeper triggers another request).
 - Return `null` if the path is invalid / navigation hits a non-object.
