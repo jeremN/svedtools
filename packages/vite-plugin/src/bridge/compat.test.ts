@@ -2,6 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { isTestedSvelteVersion, TESTED_SVELTE_RANGE, Compat } from './compat.js';
 import type { Reaction } from './types.js';
 
+describe('Compat.getValue — value signal vs object-state proxy', () => {
+  it('returns .v for a Value node (has .v, .reactions, .equals)', () => {
+    expect(Compat.getValue({ v: 42, reactions: [], equals: () => false } as never)).toBe(42);
+  });
+  it('returns the proxy itself for an object-state proxy (no .v, reads like the object)', () => {
+    // Object/array/Map $state is a transparent proxy — no `.v`/`.reactions`.
+    const proxy = { name: 'Ada', address: {} } as Record<PropertyKey, unknown>;
+    expect(Compat.getValue(proxy as never)).toBe(proxy);
+  });
+  it('does not mistake a user object whose keys include v/reactions for a Value node', () => {
+    // The discriminator also requires `.equals`, so an object missing it is returned as-is.
+    const obj = { v: 1, reactions: [] } as Record<PropertyKey, unknown>;
+    expect(Compat.getValue(obj as never)).toBe(obj);
+  });
+});
+
 // The runtime "tested" classifier gates on the whole tested major (Svelte 5):
 // the compat matrix CI exercises 5.0.0 / 5.10.0 / 5.20.0 / 5.x, and the plugin's
 // peer range is `svelte: ^5.0.0`. So every 5.x is tested; 6+ is not. This guards

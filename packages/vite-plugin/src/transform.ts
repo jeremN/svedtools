@@ -107,6 +107,7 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
             break;
 
           case 'tag':
+          case 'tag_proxy':
             instrumentTag(s, node);
             hasChanges = true;
             break;
@@ -259,11 +260,11 @@ function instrumentUpdate(s: MagicString, node: any): void {
 
 /**
  * $.tag($.state(0), 'count') or $.tag($.derived(...), 'doubled')
- * → ($.tag($.state(0), 'count'), window.__svelte_devtools__?.registerSignal(RESULT, 'count'))
- *
- * BUT $.tag returns the signal, so we need a temp to capture it.
- * Simpler: wrap as an IIFE that captures the result:
  * → (() => { const __s = $.tag($.state(0), 'count'); window.__svelte_devtools__?.registerSignal(__s, 'count'); return __s; })()
+ *
+ * Also handles $.tag_proxy($.proxy({...}), 'label') — object/array/Map $state.
+ * Both forms share the same (value, stringLiteralLabel) shape and return the value,
+ * so a single IIFE wrapper works for both.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentTag(s: MagicString, node: any): void {

@@ -49,8 +49,18 @@ function reactionFlags(r: unknown): number | null {
 export const Compat = {
   // -- Source signal access --
   getValue(signal: Value): unknown {
-    // Outside a tracking context this is an untracked read (safe).
-    return signal.v;
+    // A primitive/derived $state is a Svelte `Value` node — it holds the value in
+    // `.v` alongside the internal `.reactions` list and an `.equals` comparator.
+    // Object/array/Map $state is instead a transparent reactive PROXY: it has no
+    // `.v` and reads like the plain object, so the proxy itself is the value (the
+    // serializer enumerates it directly). We discriminate on the Value node's
+    // internal shape — requiring `v` + `reactions` + `equals` together so a user
+    // object whose own keys merely include `v` can't be mistaken for a signal.
+    if (signal && typeof signal === 'object' && 'v' in signal && 'reactions' in signal && 'equals' in signal) {
+      // Outside a tracking context this is an untracked read (safe).
+      return signal.v;
+    }
+    return signal;
   },
   getLabel(target: Value | Reaction): string | null {
     return target.label ?? null;
