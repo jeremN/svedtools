@@ -155,7 +155,7 @@ $.get(signal)                 // State read (dependency tracking)`;
   :global(.doc p > code),
   :global(.doc li > code),
   :global(.doc td > code) {
-    background: #eee;
+    background: var(--code-inline-bg);
     padding: 0.15em 0.4em;
     border-radius: 3px;
   }

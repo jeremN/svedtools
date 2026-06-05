@@ -175,7 +175,7 @@ type MessageType =
 
   :global(.doc p > code),
   :global(.doc li > code) {
-    background: #eee;
+    background: var(--code-inline-bg);
     padding: 0.15em 0.4em;
     border-radius: 3px;
   }
