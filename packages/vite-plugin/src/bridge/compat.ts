@@ -9,7 +9,6 @@ import type { Value, Reaction, ComponentFn } from './types.js';
  * All accessors are read-only — the bridge never mutates Svelte internals.
  */
 
-export const STATE_SYMBOL = Symbol.for('state');
 export const FILENAME_SYMBOL = Symbol.for('svelte.filename');
 
 /**
@@ -144,15 +143,6 @@ export const Compat = {
     }
     // Fallback: check FILENAME_SYMBOL directly
     return (fn as unknown as Record<symbol, string | undefined>)[FILENAME_SYMBOL] || null;
-  },
-
-  // -- Proxy unwrap for $state objects --
-  unwrapStateProxy<T>(obj: T): T {
-    if (obj && typeof obj === 'object' && STATE_SYMBOL in obj) {
-      const raw = (obj as unknown as Record<symbol, unknown>)[STATE_SYMBOL];
-      if (raw && typeof raw === 'object') return raw as T;
-    }
-    return obj;
   },
 };
 

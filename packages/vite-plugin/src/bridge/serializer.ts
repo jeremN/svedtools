@@ -1,5 +1,3 @@
-import { Compat } from './compat.js';
-
 /**
  * Lightweight serializer that runs in the page context. Mirrors the
  * panel-side `serialize()` in @svelte-devtools/shared but inlined here
@@ -25,7 +23,11 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
   if (t === 'symbol') return 'Symbol(' + ((value as symbol).description || '') + ')';
   if (t === 'function') return 'fn ' + ((value as { name?: string }).name || 'anonymous') + '()';
 
-  const raw = Compat.unwrapStateProxy(value as object);
+  // Svelte $state proxies enumerate transparently (reads/ownKeys forward to the
+  // target, and they expose no detectable marker symbol — Svelte's own
+  // $state.snapshot reads through them the same way), so we read the value
+  // directly without unwrapping.
+  const raw = value as object;
   if (seen.has(raw as object)) return { __type: 'circular', path: '' };
   seen.add(raw as object);
 
@@ -110,18 +112,18 @@ const MAX_CHILDREN = 100;
 
 /**
  * Navigate a LIVE value along `path` and serialize one level of children.
- * Used by the bridge's state:expand handler for lazy drill-down. Unwraps Svelte
- * state proxies at each step via Compat. Returns null when `root` or the
- * navigated value is not an object (e.g. primitive, null) or when the path
- * can't be navigated; a throwing getter degrades to a `truncated` child rather
- * than aborting the whole expansion.
+ * Used by the bridge's state:expand handler for lazy drill-down. Svelte $state
+ * proxies enumerate transparently, so navigation reads through them directly.
+ * Returns null when `root` or the navigated value is not an object (e.g.
+ * primitive, null) or when the path can't be navigated; a throwing getter
+ * degrades to a `truncated` child rather than aborting the whole expansion.
  */
 export function serializeChildrenAtPath(root: unknown, path: string[]): Record<string, unknown> | null {
   let current: unknown = root;
 
   for (const key of path) {
     if (current === null || typeof current !== 'object') return null;
-    const container = Compat.unwrapStateProxy(current as object);
+    const container = current as object;
     try {
       if (Array.isArray(container)) {
         const idx = Number(key);
@@ -144,7 +146,7 @@ export function serializeChildrenAtPath(root: unknown, path: string[]): Record<s
   }
 
   if (current === null || typeof current !== 'object') return null;
-  const container = Compat.unwrapStateProxy(current as object);
+  const container = current as object;
   const result: Record<string, unknown> = {};
 
   if (Array.isArray(container)) {

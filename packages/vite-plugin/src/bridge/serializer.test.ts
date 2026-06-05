@@ -1,6 +1,31 @@
 import { describe, it, expect } from 'vitest';
 import { safeSerialize, serializeChildrenAtPath } from './serializer.js';
 
+describe('transparent state proxies (no symbol unwrap needed)', () => {
+  // Svelte 5 $state object/array proxies enumerate transparently — reads and
+  // ownKeys forward to the target, and the proxy exposes no detectable marker
+  // symbol (Svelte uses a private Symbol('$state'); $state.snapshot reads through
+  // the proxy the same way). A real `new Proxy(target, {})` mimics that; the
+  // serializer must handle it by reading through, with no proxy "unwrapping".
+  it('serializes a transparent object proxy via forwarded keys', () => {
+    const out = safeSerialize(new Proxy({ name: 'Ada', tags: [1, 2] }, {})) as {
+      __type: string;
+      childCount?: number;
+    };
+    expect(out.__type).toBe('object');
+    expect(out.childCount).toBe(2);
+  });
+  it('serializes a transparent array proxy as an array', () => {
+    const out = safeSerialize(new Proxy([1, 2, 3], {})) as { __type: string; length?: number };
+    expect(out.__type).toBe('array');
+    expect(out.length).toBe(3);
+  });
+  it('navigates a transparent proxy with serializeChildrenAtPath', () => {
+    const out = serializeChildrenAtPath(new Proxy({ a: { b: 1 } }, {}), ['a']) as Record<string, unknown>;
+    expect(out).toEqual({ b: 1 });
+  });
+});
+
 describe('safeSerialize Map/Set handling', () => {
   it('serializes a Map with entry previews', () => {
     const result = safeSerialize(
