@@ -1,67 +1,24 @@
 <script lang="ts">
   import { getSelectedId, getStateSnapshot, getComponentMap } from '../lib/components.svelte.js';
-  import type {
-    SerializedValue,
-    SerializedPrimitive,
-    SerializedObject,
-    SerializedArray,
-  } from '@svelte-devtools/shared';
+  import ValueTree from './ValueTree.svelte';
+  import { resetExpansion } from '../lib/expansion.svelte.js';
 
   let selectedId = $derived(getSelectedId());
   let stateSnapshot = $derived(getStateSnapshot());
   let componentMap = $derived(getComponentMap());
   let selectedComponent = $derived(selectedId ? componentMap[selectedId] : null);
 
+  $effect(() => {
+    void selectedId; // track selection; reset drill-down state when it changes
+    resetExpansion();
+  });
+
   function typeBadgeLabel(type: 'state' | 'derived' | 'props'): string {
     if (type === 'state') return '$state';
     if (type === 'derived') return '$derived';
     return '$props';
   }
-
-  function isSerializedComplex(value: SerializedValue): value is Exclude<SerializedValue, SerializedPrimitive> {
-    return typeof value === 'object' && value !== null && '__type' in value;
-  }
-
-  function formatDomNode(value: { __type: 'dom'; tag: string; id: string | null; className: string | null }): string {
-    let result = `<${value.tag}`;
-    if (value.id) result += `#${value.id}`;
-    if (value.className) result += `.${value.className.split(' ').join('.')}`;
-    result += '>';
-    return result;
-  }
 </script>
-
-{#snippet valueDisplay(value: SerializedValue)}
-  {#if value === null}
-    <span class="value-null">null</span>
-  {:else if value === undefined}
-    <span class="value-null">undefined</span>
-  {:else if typeof value === 'string'}
-    <span class="value-string">"{value}"</span>
-  {:else if typeof value === 'number'}
-    <span class="value-number">{value}</span>
-  {:else if typeof value === 'boolean'}
-    <span class="value-boolean">{String(value)}</span>
-  {:else if isSerializedComplex(value)}
-    {#if value.__type === 'object'}
-      <span class="value-object" title={(value as SerializedObject).preview}>
-        {(value as SerializedObject).preview}
-      </span>
-    {:else if value.__type === 'array'}
-      <span class="value-array" title={(value as SerializedArray).preview}>
-        Array({(value as SerializedArray).length})
-      </span>
-    {:else if value.__type === 'dom'}
-      <span class="value-dom">
-        {formatDomNode(value as { __type: 'dom'; tag: string; id: string | null; className: string | null })}
-      </span>
-    {:else if value.__type === 'circular'}
-      <span class="value-circular">[Circular]</span>
-    {:else if value.__type === 'truncated'}
-      <span class="value-truncated">{(value as { __type: 'truncated'; reason: string }).reason}</span>
-    {/if}
-  {/if}
-{/snippet}
 
 <div class="state-inspector">
   <div class="header">
@@ -87,7 +44,7 @@
             <span class="signal-label unnamed">unnamed</span>
           {/if}
           <span class="signal-value">
-            {@render valueDisplay(signal.value)}
+            <ValueTree rootId={signal.id} value={signal.value} />
           </span>
         </div>
       {/each}
@@ -130,7 +87,7 @@
 
   .signal-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     padding: 6px 8px;
     border-bottom: 1px solid #2a2a2a;
   }
@@ -175,47 +132,7 @@
     font-size: 12px;
     font-family: monospace;
     margin-left: auto;
-    max-width: 60%;
     text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .value-string {
-    color: #6a9955;
-  }
-
-  .value-number {
-    color: #b5cea8;
-  }
-
-  .value-boolean {
-    color: #569cd6;
-  }
-
-  .value-null {
-    color: #808080;
-    font-style: italic;
-  }
-
-  .value-object,
-  .value-array {
-    color: #ccc;
-    cursor: default;
-  }
-
-  .value-dom {
-    color: #c586c0;
-  }
-
-  .value-circular {
-    color: #ce9178;
-  }
-
-  .value-truncated {
-    color: #808080;
-    font-style: italic;
   }
 
   .empty-state {

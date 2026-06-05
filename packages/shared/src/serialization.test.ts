@@ -212,23 +212,26 @@ describe('serialize: depth limits', () => {
   });
 });
 
-// -- Svelte Proxy Unwrapping --
+// -- Svelte state proxies (transparent enumeration) --
 
-describe('serialize: Svelte proxy unwrapping', () => {
-  it('unwraps objects with Symbol.for("state")', () => {
-    const raw = { count: 42, name: 'test' };
-    const proxy = {
-      [Symbol.for('state')]: raw,
-      // Proxy might have different enumerable keys
-      get count() {
-        throw new Error('should not be called');
-      },
-    };
-    // The serializer should use the raw object's keys
-    const result = serialize(proxy) as SerializedObject;
+describe('serialize: Svelte state proxies', () => {
+  // Svelte 5 $state proxies enumerate transparently — ownKeys/get forward to the
+  // target and the proxy exposes no detectable marker symbol (Svelte uses a
+  // private Symbol('$state'), and $state.snapshot reads through the proxy the same
+  // way). So the serializer produces a correct preview by reading the proxy
+  // directly, with no symbol-based unwrapping. A real `new Proxy(target, {})`
+  // mimics that transparency.
+  it('serializes a transparent object proxy via its forwarded keys', () => {
+    const result = serialize(new Proxy({ count: 42, name: 'test' }, {})) as SerializedObject;
     expect(result.__type).toBe('object');
     expect(result.preview).toContain('count');
     expect(result.preview).toContain('42');
+    expect(result.childCount).toBe(2);
+  });
+  it('serializes a transparent array proxy as an array', () => {
+    const result = serialize(new Proxy([1, 2, 3], {})) as SerializedArray;
+    expect(result.__type).toBe('array');
+    expect(result.length).toBe(3);
   });
 });
 

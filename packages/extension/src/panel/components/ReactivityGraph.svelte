@@ -11,6 +11,8 @@
   import { getComponentMap } from '../lib/components.svelte.js';
   import { send } from '../lib/connection.svelte.js';
   import type { NodeId, ReactiveGraphNode } from '@svelte-devtools/shared';
+  import ValueTree from './ValueTree.svelte';
+  import { resetExpansion } from '../lib/expansion.svelte.js';
   import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
   import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 
@@ -71,6 +73,14 @@
   // -- Derived: component list for filter dropdown --
 
   let componentEntries = $derived(Object.entries(componentMap));
+
+  // -- Derived: selected node for detail panel --
+
+  let selectedNode = $derived(simNodes.find((n) => n.id === selectedNodeId) ?? null);
+  $effect(() => {
+    void selectedNodeId; // track selection
+    resetExpansion();
+  });
 
   // -- Derived: set of node IDs connected to selected node --
 
@@ -506,6 +516,18 @@
       </div>
     {/if}
   {/if}
+
+  {#if selectedNode && selectedNode.value !== null && selectedNode.value !== undefined}
+    <div class="detail-panel">
+      <div class="detail-header">
+        <span class="detail-label">{selectedNode.label ?? selectedNode.type}</span>
+        <span class="detail-type">{selectedNode.type}</span>
+      </div>
+      <div class="detail-value">
+        <ValueTree rootId={selectedNode.id} value={selectedNode.value} />
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -655,5 +677,37 @@
     font-family: monospace;
     font-size: 13px;
     font-style: italic;
+  }
+
+  /* -- Detail panel -- */
+
+  .detail-panel {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    max-width: 320px;
+    max-height: 50%;
+    overflow: auto;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px;
+    z-index: 50;
+  }
+  .detail-header {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .detail-label {
+    font-weight: bold;
+    color: #fff;
+    font-family: monospace;
+  }
+  .detail-type {
+    color: #888;
+    font-size: 11px;
+    font-family: monospace;
   }
 </style>

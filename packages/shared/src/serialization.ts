@@ -54,7 +54,7 @@ export function serializeAtPath(
     if (current === null || current === undefined || typeof current !== 'object') {
       return { __type: 'truncated', reason: `Invalid path at "${key}"` };
     }
-    const obj = unwrapProxy(current as Record<string | symbol, unknown>);
+    const obj = current as Record<string | symbol, unknown>;
     if (Array.isArray(obj)) {
       const idx = Number(key);
       if (Number.isNaN(idx) || idx < 0 || idx >= obj.length) {
@@ -67,8 +67,7 @@ export function serializeAtPath(
   }
 
   // Serialize all children at this level
-  const unwrapped =
-    current && typeof current === 'object' ? unwrapProxy(current as Record<string | symbol, unknown>) : current;
+  const unwrapped = current && typeof current === 'object' ? (current as Record<string | symbol, unknown>) : current;
 
   if (Array.isArray(unwrapped)) {
     const result: Record<string, SerializedValue> = {};
@@ -124,8 +123,9 @@ function serializeInner(
   // From here on, value is an object
   const obj = value as Record<string | symbol, unknown>;
 
-  // Unwrap Svelte Proxy if present
-  const raw = unwrapProxy(obj);
+  // Svelte $state proxies enumerate transparently (no symbol-based unwrap needed —
+  // mirrors the bridge serializer and Svelte's own $state.snapshot).
+  const raw = obj;
 
   // Circular reference detection
   if (seen.has(raw)) {
@@ -275,17 +275,6 @@ function previewValue(value: unknown): string {
   if (isDomNode(value)) return `<${(value as Element).tagName.toLowerCase()}>`;
 
   return '{...}';
-}
-
-/** Unwrap Svelte 5 Proxy using the _RAW symbol or $.unwrap */
-function unwrapProxy(obj: Record<string | symbol, unknown>): Record<string | symbol, unknown> {
-  // Svelte uses Symbol.for('state') or the _RAW symbol internally
-  const STATE_SYMBOL = Symbol.for('state');
-  if (STATE_SYMBOL in obj) {
-    const raw = obj[STATE_SYMBOL];
-    if (raw && typeof raw === 'object') return raw as Record<string | symbol, unknown>;
-  }
-  return obj;
 }
 
 function isDomNode(value: unknown): boolean {

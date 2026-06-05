@@ -64,6 +64,16 @@ function MemberTarget($$anchor, $$props) {
 }
 `.trim();
 
+const PROXY_STATE_FIXTURE = `
+import * as $ from "svelte/internal/client";
+
+function Profile($$anchor, $$props) {
+  $.push($$props, true, Profile);
+  let user = $.tag_proxy($.proxy({ name: 'Ada' }), 'user');
+  return $.pop($$exports);
+}
+`.trim();
+
 describe('transformSvelteOutput', () => {
   it('returns null for non-Svelte code', () => {
     const result = transformSvelteOutput('const x = 1;', 'test.js');
@@ -153,6 +163,14 @@ describe('transformSvelteOutput', () => {
     expect(code).toContain('$.update(__sig, -1)');
     expect(code).toContain('__svelte_devtools__?.preMutation(__sig)');
     expect(code).toContain('__svelte_devtools__?.onMutation(__sig)');
+  });
+
+  it('instruments $.tag_proxy with registerSignal call (object/array/map $state)', () => {
+    const result = transformSvelteOutput(PROXY_STATE_FIXTURE, 'Profile.svelte');
+    expect(result).not.toBeNull();
+    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "user")');
+    // original tag_proxy call preserved inside the IIFE
+    expect(result!.code).toContain("$.tag_proxy($.proxy({ name: 'Ada' }), 'user')");
   });
 
   it('handles alternative $ namespace name', () => {

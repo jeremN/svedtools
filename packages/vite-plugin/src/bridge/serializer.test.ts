@@ -1,5 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { safeSerialize } from './serializer.js';
+import { safeSerialize, serializeChildrenAtPath } from './serializer.js';
+
+describe('transparent state proxies (no symbol unwrap needed)', () => {
+  // Svelte 5 $state object/array proxies enumerate transparently — reads and
+  // ownKeys forward to the target, and the proxy exposes no detectable marker
+  // symbol (Svelte uses a private Symbol('$state'); $state.snapshot reads through
+  // the proxy the same way). A real `new Proxy(target, {})` mimics that; the
+  // serializer must handle it by reading through, with no proxy "unwrapping".
+  it('serializes a transparent object proxy via forwarded keys', () => {
+    const out = safeSerialize(new Proxy({ name: 'Ada', tags: [1, 2] }, {})) as {
+      __type: string;
+      childCount?: number;
+    };
+    expect(out.__type).toBe('object');
+    expect(out.childCount).toBe(2);
+  });
+  it('serializes a transparent array proxy as an array', () => {
+    const out = safeSerialize(new Proxy([1, 2, 3], {})) as { __type: string; length?: number };
+    expect(out.__type).toBe('array');
+    expect(out.length).toBe(3);
+  });
+  it('navigates a transparent proxy with serializeChildrenAtPath', () => {
+    const out = serializeChildrenAtPath(new Proxy({ a: { b: 1 } }, {}), ['a']) as Record<string, unknown>;
+    expect(out).toEqual({ b: 1 });
+  });
+});
 
 describe('safeSerialize Map/Set handling', () => {
   it('serializes a Map with entry previews', () => {
@@ -71,5 +96,46 @@ describe('safeSerialize regression sanity', () => {
     expect(result.__type).toBe('array');
     expect(result.length).toBe(3);
     expect(result.preview).toBe('[1, 2, 3]');
+  });
+});
+
+describe('serializeChildrenAtPath', () => {
+  it('returns one level of object children keyed by key', () => {
+    const out = serializeChildrenAtPath({ a: { b: 1 }, c: 2 }, []) as Record<string, { __type?: string }>;
+    expect(Object.keys(out)).toEqual(['a', 'c']);
+    expect(out.c).toBe(2);
+    expect(out.a.__type).toBe('object');
+  });
+  it('navigates into a nested object path', () => {
+    const out = serializeChildrenAtPath({ a: { b: { x: 1 } } }, ['a', 'b']) as Record<string, unknown>;
+    expect(out).toEqual({ x: 1 });
+  });
+  it('navigates into an array index', () => {
+    const out = serializeChildrenAtPath({ list: [{ v: 1 }, { v: 2 }] }, ['list', '1']) as Record<string, unknown>;
+    expect(out).toEqual({ v: 2 });
+  });
+  it('navigates into a Map by key and lists Map entries', () => {
+    const m = new Map<string, unknown>([['k', { n: 1 }]]);
+    expect(serializeChildrenAtPath(m, [])).toHaveProperty('k');
+    expect(serializeChildrenAtPath(m, ['k'])).toEqual({ n: 1 });
+  });
+  it('returns null for an out-of-bounds index or invalid path', () => {
+    expect(serializeChildrenAtPath({ list: [1] }, ['list', '5'])).toBeNull();
+    expect(serializeChildrenAtPath({ a: 1 }, ['a', 'b'])).toBeNull();
+  });
+  it('navigates into a Set by index', () => {
+    const s = new Set([{ a: 1 }, { b: 2 }]);
+    expect(serializeChildrenAtPath(s, ['1'])).toEqual({ b: 2 });
+  });
+  it('does not throw on a hostile getter — yields a truncated child', () => {
+    const obj = {
+      get boom() {
+        throw new Error('no');
+      },
+      ok: 1,
+    };
+    const out = serializeChildrenAtPath(obj, []) as Record<string, { __type?: string }>;
+    expect(out.ok).toBe(1);
+    expect(out.boom.__type).toBe('truncated');
   });
 });
