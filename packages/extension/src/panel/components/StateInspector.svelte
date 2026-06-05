@@ -56,28 +56,28 @@
 
 <style>
   .state-inspector {
-    padding: 12px;
+    padding: var(--space-5);
     overflow-y: auto;
-    font-family: monospace;
-    color: #ccc;
+    font-family: var(--font-mono);
+    color: var(--text-default);
   }
 
   .header {
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #2a2a2a;
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .header-name {
-    font-weight: bold;
-    font-size: 14px;
-    color: #e8ab6a;
+    font-weight: 600;
+    font-size: var(--text-lg);
+    color: var(--text-strong);
   }
 
   .header-muted {
-    color: #666;
+    color: var(--text-muted);
     font-style: italic;
-    font-size: 13px;
+    font-size: var(--text-md);
   }
 
   .signal-list {
@@ -88,58 +88,46 @@
   .signal-row {
     display: flex;
     align-items: flex-start;
-    padding: 6px 8px;
-    border-bottom: 1px solid #2a2a2a;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
+  /* Signal kind: a neutral chip; the $state / $derived / $props keyword carries the meaning. */
   .type-badge {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 3px;
+    font-size: var(--text-xs);
+    padding: 1px var(--space-3);
+    border-radius: var(--radius-sm);
     font-weight: 600;
-    font-family: monospace;
+    font-family: var(--font-mono);
     flex-shrink: 0;
-  }
-
-  .type-state {
-    background: #2d4a2d;
-    color: #6abf6a;
-  }
-
-  .type-derived {
-    background: #4a3d2d;
-    color: #d4a843;
-  }
-
-  .type-props {
-    background: #2d3a4a;
-    color: #5b9bd5;
+    background: var(--surface-overlay);
+    color: var(--text-muted);
   }
 
   .signal-label {
-    font-size: 13px;
-    color: #ccc;
-    margin-left: 8px;
+    font-size: var(--text-md);
+    color: var(--text-default);
+    margin-left: var(--space-4);
     flex-shrink: 0;
   }
 
   .signal-label.unnamed {
     font-style: italic;
-    color: #666;
+    color: var(--text-faint);
   }
 
   .signal-value {
-    font-size: 12px;
-    font-family: monospace;
+    font-size: var(--text-base);
+    font-family: var(--font-mono);
     margin-left: auto;
     text-align: right;
   }
 
   .empty-state {
-    color: #666;
-    padding: 16px;
+    color: var(--text-muted);
+    padding: var(--space-6);
     text-align: center;
     font-style: italic;
-    font-size: 13px;
+    font-size: var(--text-md);
   }
 </style>

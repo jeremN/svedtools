@@ -279,21 +279,19 @@
     return String(value);
   }
 
-  // -- Edge color --
+  // -- Edge color: flame on the active path, neutral otherwise --
 
   function edgeColor(link: SimLink): string {
     if (selectedNodeId && (link.from === selectedNodeId || link.to === selectedNodeId)) {
-      return '#ff3e00';
+      return 'var(--accent)';
     }
-    return '#555';
+    return 'var(--graph-edge)';
   }
 
-  // -- Node fill color --
+  // -- Node fill: a single neutral. Type is read from the shape, not the colour. --
 
-  function nodeFill(type: ReactiveGraphNode['type']): string {
-    if (type === 'source') return '#ff3e00';
-    if (type === 'derived') return '#cca700';
-    return '#4ec960';
+  function nodeFill(): string {
+    return 'var(--graph-node)';
   }
 
   // -- Get link source/target coordinates --
@@ -385,7 +383,7 @@
           markerHeight="6"
           orient="auto-start-reverse"
         >
-          <path d="M 0 0 L 10 3 L 0 6 Z" fill="#555" />
+          <path d="M 0 0 L 10 3 L 0 6 Z" style="fill: var(--graph-edge)" />
         </marker>
         <marker
           id="arrowhead-selected"
@@ -396,7 +394,7 @@
           markerHeight="6"
           orient="auto-start-reverse"
         >
-          <path d="M 0 0 L 10 3 L 0 6 Z" fill="#ff3e00" />
+          <path d="M 0 0 L 10 3 L 0 6 Z" style="fill: var(--accent)" />
         </marker>
       </defs>
 
@@ -408,7 +406,7 @@
             y1={linkY1(link)}
             x2={linkX2(link)}
             y2={linkY2(link)}
-            stroke={edgeColor(link)}
+            style="stroke: {edgeColor(link)}"
             stroke-width="1.5"
             marker-end={selectedNodeId && (link.from === selectedNodeId || link.to === selectedNodeId)
               ? 'url(#arrowhead-selected)'
@@ -435,7 +433,7 @@
             <!-- Dirty pulsing ring -->
             {#if node.dirty}
               {#if node.type === 'source'}
-                <circle r="18" class="dirty-ring" fill="none" stroke="#ff3e00" stroke-width="2" />
+                <circle r="18" class="dirty-ring" fill="none" style="stroke: var(--accent)" stroke-width="2" />
               {:else if node.type === 'derived'}
                 <rect
                   x="-16"
@@ -445,7 +443,7 @@
                   transform="rotate(45)"
                   class="dirty-ring"
                   fill="none"
-                  stroke="#ff3e00"
+                  style="stroke: var(--accent)"
                   stroke-width="2"
                 />
               {:else}
@@ -456,7 +454,7 @@
                   height="32"
                   class="dirty-ring"
                   fill="none"
-                  stroke="#ff3e00"
+                  style="stroke: var(--accent)"
                   stroke-width="2"
                 />
               {/if}
@@ -466,8 +464,7 @@
             {#if node.type === 'source'}
               <circle
                 r="12"
-                fill={nodeFill(node.type)}
-                stroke={isSelected ? '#fff' : 'none'}
+                style="fill: {nodeFill()}; stroke: {isSelected ? 'var(--accent)' : 'none'}"
                 stroke-width={isSelected ? 2 : 0}
               />
             {:else if node.type === 'derived'}
@@ -477,8 +474,7 @@
                 x="-10"
                 y="-10"
                 transform="rotate(45)"
-                fill={nodeFill(node.type)}
-                stroke={isSelected ? '#fff' : 'none'}
+                style="fill: {nodeFill()}; stroke: {isSelected ? 'var(--accent)' : 'none'}"
                 stroke-width={isSelected ? 2 : 0}
               />
             {:else}
@@ -487,8 +483,7 @@
                 height="20"
                 x="-10"
                 y="-10"
-                fill={nodeFill(node.type)}
-                stroke={isSelected ? '#fff' : 'none'}
+                style="fill: {nodeFill()}; stroke: {isSelected ? 'var(--accent)' : 'none'}"
                 stroke-width={isSelected ? 2 : 0}
               />
             {/if}
@@ -545,46 +540,49 @@
   .toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: #252525;
-    padding: 6px 8px;
-    border-bottom: 1px solid #333;
+    gap: var(--space-4);
+    background: var(--surface-raised);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
   }
 
   .filter-select {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #ccc;
-    font-size: 12px;
-    padding: 3px 6px;
-    border-radius: 3px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    font-size: var(--text-base);
+    font-family: var(--font-ui);
+    padding: 3px var(--space-3);
+    border-radius: var(--radius-sm);
     outline: none;
   }
 
   .filter-select:focus {
-    border-color: #666;
+    border-color: var(--accent);
   }
 
   .refresh-btn {
-    background: #333;
-    border: 1px solid #555;
-    color: #ccc;
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 3px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    color: var(--text-default);
+    font-size: var(--text-base);
+    padding: 3px var(--space-5);
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
   }
 
   .refresh-btn:hover {
-    background: #444;
+    background: color-mix(in oklab, var(--surface-overlay) 90%, white);
   }
 
   .node-count {
     margin-left: auto;
-    color: #888;
-    font-size: 11px;
-    font-family: monospace;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 
   /* -- SVG graph -- */
@@ -605,16 +603,16 @@
   }
 
   .node-label {
-    fill: #aaa;
-    font-family: monospace;
-    font-size: 10px;
+    fill: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     pointer-events: none;
   }
 
-  /* -- Dirty pulse animation -- */
+  /* -- Dirty pulse (flame). Stays a static visible ring under reduced motion. -- */
 
   .dirty-ring {
-    animation: pulse 1s infinite;
+    animation: pulse 1s var(--ease-out) infinite;
   }
 
   @keyframes pulse {
@@ -631,39 +629,39 @@
 
   .tooltip {
     position: fixed;
-    background: #2a2a2a;
-    border: 1px solid #444;
-    padding: 8px;
-    border-radius: 4px;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
     pointer-events: none;
-    z-index: 100;
-    font-family: monospace;
-    font-size: 11px;
-    color: #ccc;
+    z-index: var(--z-tooltip);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--text-default);
     max-width: 250px;
     white-space: nowrap;
   }
 
   .tooltip-label {
-    font-weight: bold;
-    color: #fff;
-    margin-bottom: 4px;
+    font-weight: 600;
+    color: var(--text-strong);
+    margin-bottom: var(--space-2);
   }
 
   .tooltip-type {
-    color: #aaa;
+    color: var(--text-muted);
   }
 
   .tooltip-value {
-    color: #8bc48b;
+    color: var(--val-string);
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .tooltip-dirty {
-    color: #ff3e00;
-    font-weight: bold;
-    margin-top: 4px;
+    color: var(--accent-text);
+    font-weight: 600;
+    margin-top: var(--space-2);
   }
 
   /* -- Empty state -- */
@@ -673,9 +671,9 @@
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: #666;
-    font-family: monospace;
-    font-size: 13px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-md);
     font-style: italic;
   }
 
@@ -683,31 +681,31 @@
 
   .detail-panel {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
+    right: var(--space-4);
+    bottom: var(--space-4);
     max-width: 320px;
     max-height: 50%;
     overflow: auto;
-    background: #222;
-    border: 1px solid #444;
-    border-radius: 4px;
-    padding: 8px;
-    z-index: 50;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    z-index: var(--z-overlay);
   }
   .detail-header {
     display: flex;
-    gap: 8px;
+    gap: var(--space-4);
     align-items: baseline;
-    margin-bottom: 6px;
+    margin-bottom: var(--space-3);
   }
   .detail-label {
-    font-weight: bold;
-    color: #fff;
-    font-family: monospace;
+    font-weight: 600;
+    color: var(--text-strong);
+    font-family: var(--font-mono);
   }
   .detail-type {
-    color: #888;
-    font-size: 11px;
-    font-family: monospace;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
   }
 </style>

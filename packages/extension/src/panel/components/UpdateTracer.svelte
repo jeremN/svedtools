@@ -178,27 +178,27 @@
   .header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .clear-btn {
-    padding: 4px 12px;
-    border-radius: 4px;
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-md);
     font-weight: 600;
-    font-size: 12px;
-    background: #333;
-    color: #888;
-    border: 1px solid #555;
+    font-size: var(--text-base);
+    background: var(--surface-overlay);
+    color: var(--text-default);
+    border: 1px solid var(--border-default);
     cursor: pointer;
     font-family: inherit;
   }
 
   .clear-btn:hover:not(:disabled) {
-    background: #3a3a3a;
-    color: #ccc;
+    background: color-mix(in oklab, var(--surface-overlay) 90%, white);
+    color: var(--text-strong);
   }
 
   .clear-btn:disabled {
@@ -207,8 +207,8 @@
   }
 
   .trace-count {
-    color: #888;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     margin-left: auto;
   }
 
@@ -218,8 +218,8 @@
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: #666;
-    font-size: 13px;
+    color: var(--text-muted);
+    font-size: var(--text-md);
     font-style: italic;
     padding: 32px;
   }
@@ -228,80 +228,82 @@
   .timeline {
     overflow-y: auto;
     flex: 1;
-    font-family: monospace;
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
   }
 
   /* Trace row */
   .trace-row {
-    border-bottom: 1px solid #2a2a2a;
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .trace-row.selected {
-    background: #2a2a2a;
+    background: var(--surface-selected);
   }
 
   .trace-row-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-3);
     width: 100%;
-    padding: 6px 10px;
+    padding: var(--space-3) var(--space-5);
     background: none;
     border: none;
-    color: #ccc;
+    color: var(--text-default);
     cursor: pointer;
-    font-family: monospace;
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
     text-align: left;
   }
 
   .trace-row-btn:hover {
-    background: #252525;
+    background: var(--surface-hover);
   }
 
   .chevron {
-    color: #888;
-    font-size: 10px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
     width: 10px;
     flex-shrink: 0;
   }
 
   .time-ago {
-    color: #888;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     min-width: 48px;
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
   }
 
+  /* Flame text uses --accent-text (legible at small sizes on any surface). */
   .signal-label {
-    color: #ff3e00;
+    color: var(--accent-text);
     font-weight: 600;
   }
 
   .arrow {
-    color: #555;
+    color: var(--text-faint);
   }
 
   .component-name {
-    color: #e8ab6a;
+    color: var(--text-strong);
   }
 
   .chain-badge {
     margin-left: auto;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: #333;
-    color: #888;
-    font-size: 10px;
+    padding: 1px var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
     flex-shrink: 0;
   }
 
   /* Trace detail */
   .trace-detail {
-    padding: 8px 10px 12px 26px;
-    border-top: 1px solid #333;
-    background: #1e1e1e;
+    padding: var(--space-4) var(--space-4) var(--space-5) 26px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--surface-base);
   }
 
   .detail-section {
@@ -313,81 +315,81 @@
   }
 
   .section-title {
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #888;
-    margin-bottom: 4px;
-    padding-bottom: 2px;
-    border-bottom: 1px solid #333;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   /* Root cause */
   .root-cause-info {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 0;
-    color: #ccc;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    color: var(--text-default);
   }
 
   .label {
-    color: #888;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .value-highlight {
-    color: #ff3e00;
+    color: var(--accent-text);
     font-weight: 600;
   }
 
   .component-tag {
-    color: #e8ab6a;
-    font-size: 11px;
+    color: var(--text-default);
+    font-size: var(--text-sm);
   }
 
   .value-change {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-    font-size: 11px;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
   }
 
   .old-value {
-    color: #e54545;
+    color: var(--status-danger);
     text-decoration: line-through;
   }
 
   .new-value {
-    color: #4ec9b0;
+    color: var(--status-ok);
   }
 
   .stack-toggle {
     background: none;
     border: none;
-    color: #569cd6;
+    color: var(--val-boolean);
     cursor: pointer;
-    font-family: monospace;
-    font-size: 11px;
-    padding: 2px 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    padding: var(--space-1) 0;
   }
 
   .stack-toggle:hover {
-    color: #7bb8e8;
+    color: var(--text-strong);
   }
 
   .stack-trace {
-    font-size: 10px;
-    color: #888;
-    background: #1a1a1a;
-    padding: 6px 8px;
-    border-radius: 3px;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    background: var(--surface-sunken);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
     overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-all;
-    margin: 4px 0 0 0;
+    margin: var(--space-2) 0 0 0;
     max-height: 150px;
     overflow-y: auto;
   }
@@ -396,47 +398,41 @@
   .chain-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 0;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
   }
 
   .chain-step {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 0;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
   }
 
   .step-arrow {
-    color: #555;
-    font-size: 11px;
+    color: var(--text-faint);
+    font-size: var(--text-sm);
   }
 
+  /* Step kind: a neutral chip; the derived / effect keyword carries the meaning. */
   .type-badge {
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 3px;
+    font-size: var(--text-xs);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-sm);
     font-weight: 600;
     flex-shrink: 0;
-  }
-
-  .type-derived {
-    background: #1e2a3a;
-    color: #569cd6;
-  }
-
-  .type-effect {
-    background: #1a2e2a;
-    color: #4ec9b0;
+    font-family: var(--font-mono);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
   }
 
   .step-label {
-    color: #ccc;
+    color: var(--text-default);
   }
 
   .step-value {
-    color: #888;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -447,29 +443,30 @@
   .mutation-list {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 0;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
   }
 
   .mutation-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 2px 0;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
   }
 
   .mutation-type {
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: #2a2020;
-    color: #ce9178;
+    font-size: var(--text-xs);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
     font-weight: 600;
     flex-shrink: 0;
+    font-family: var(--font-mono);
   }
 
   .mutation-summary {
-    color: #ccc;
-    font-size: 11px;
+    color: var(--text-default);
+    font-size: var(--text-sm);
   }
 </style>

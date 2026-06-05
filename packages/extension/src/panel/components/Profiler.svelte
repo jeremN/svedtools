@@ -34,8 +34,8 @@
   });
 
   function rowBackground(maxTime: number): string {
-    if (maxTime > 16) return '#3a2020';
-    if (maxTime > 8) return '#3a3520';
+    if (maxTime > 16) return 'var(--heat-danger-bg)';
+    if (maxTime > 8) return 'var(--heat-warn-bg)';
     return 'transparent';
   }
 </script>
@@ -151,38 +151,38 @@
   .toolbar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .record-btn {
-    padding: 6px 14px;
-    border-radius: 4px;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
     font-weight: 600;
-    font-size: 12px;
+    font-size: var(--text-base);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--space-2);
   }
 
   .record-btn.idle {
-    background: #2d4a2d;
-    color: #6abf6a;
-    border: 1px solid #4a7a4a;
+    background: color-mix(in oklab, var(--status-ok) 15%, var(--surface-raised));
+    color: var(--status-ok);
+    border: 1px solid color-mix(in oklab, var(--status-ok) 38%, transparent);
   }
 
   .record-btn.recording {
-    background: #4a2020;
-    color: #ff6b6b;
-    border: 1px solid #7a3030;
-    animation: pulse 1.5s ease-in-out infinite;
+    background: color-mix(in oklab, var(--status-danger) 16%, var(--surface-raised));
+    color: var(--heat-danger-fg);
+    border: 1px solid color-mix(in oklab, var(--status-danger) 40%, transparent);
+    animation: pulse 1.5s var(--ease-out) infinite;
   }
 
   .icon-record {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 
   .icon-stop {
@@ -190,13 +190,13 @@
   }
 
   .clear-btn {
-    padding: 6px 14px;
-    border-radius: 4px;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
     font-weight: 600;
-    font-size: 12px;
-    background: #333;
-    color: #888;
-    border: 1px solid #555;
+    font-size: var(--text-base);
+    background: var(--surface-overlay);
+    color: var(--text-default);
+    border: 1px solid var(--border-default);
     cursor: pointer;
   }
 
@@ -206,42 +206,48 @@
   }
 
   .recording-indicator {
-    color: #ff6b6b;
-    font-size: 11px;
+    color: var(--heat-danger-fg);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
   }
 
   .summary {
-    color: #888;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     margin-left: auto;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Section tabs */
   .section-tabs {
     display: flex;
     gap: 0;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .section-tab {
-    padding: 4px 12px;
-    font-size: 12px;
-    color: #888;
+    padding: var(--space-2) var(--space-5);
+    font-size: var(--text-base);
+    color: var(--text-muted);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
     cursor: pointer;
     font-family: inherit;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
   }
 
   .section-tab:hover {
-    color: #ccc;
+    color: var(--text-default);
   }
 
   .section-tab.active {
-    color: #ccc;
-    border-bottom-color: #e8ab6a;
+    color: var(--text-strong);
+    font-weight: 600;
+    border-bottom-color: var(--accent);
   }
 
   /* Table */
@@ -253,41 +259,39 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
-    font-family: monospace;
+    font-size: var(--text-base);
+    font-family: var(--font-mono);
   }
 
   thead th {
-    background: #252525;
-    color: #888;
+    background: var(--surface-raised);
+    color: var(--text-muted);
     font-weight: 600;
     text-align: left;
-    padding: 6px 12px;
-    border-bottom: 1px solid #444;
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--border-default);
     position: sticky;
     top: 0;
   }
 
   tbody td {
-    padding: 6px 12px;
-    border-bottom: 1px solid #2a2a2a;
-    color: #ccc;
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-default);
   }
 
   .cell-name {
-    color: #e8ab6a;
+    color: var(--text-strong);
   }
 
-  .cell-number {
-    color: #b5cea8;
-  }
-
+  .cell-number,
   .cell-time {
-    color: #b5cea8;
+    color: var(--val-number);
+    font-variant-numeric: tabular-nums;
   }
 
   .unnamed {
-    color: #666;
+    color: var(--text-faint);
     font-style: italic;
   }
 
@@ -297,14 +301,14 @@
     align-items: center;
     justify-content: center;
     flex: 1;
-    color: #666;
-    font-size: 13px;
+    color: var(--text-muted);
+    font-size: var(--text-md);
     font-style: italic;
   }
 
   .empty-state {
-    color: #666;
-    padding: 16px;
+    color: var(--text-muted);
+    padding: var(--space-6);
     text-align: center;
     font-style: italic;
   }

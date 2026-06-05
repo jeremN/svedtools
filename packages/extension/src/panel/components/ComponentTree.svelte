@@ -171,27 +171,27 @@
   .tree-container {
     overflow-y: auto;
     flex: 1;
-    font-family: monospace;
-    font-size: 13px;
-    color: #ccc;
+    font-family: var(--font-mono);
+    font-size: var(--text-md);
+    color: var(--text-default);
     user-select: none;
   }
 
   .tree-row {
     display: flex;
     align-items: center;
-    height: 24px;
-    padding-right: 8px;
+    height: var(--row-h);
+    padding-right: var(--space-4);
     cursor: pointer;
     white-space: nowrap;
   }
 
   .tree-row:hover {
-    background: #252525;
+    background: var(--surface-hover);
   }
 
   .tree-row.selected {
-    background: #2a2d2e;
+    background: var(--surface-selected);
   }
 
   .chevron {
@@ -200,14 +200,14 @@
     justify-content: center;
     width: 12px;
     height: 12px;
-    margin-right: 4px;
+    margin-right: var(--space-2);
     padding: 0;
     border: none;
     background: none;
-    color: #888;
+    color: var(--text-muted);
     font-size: 8px;
     cursor: pointer;
-    transition: transform 0.1s ease;
+    transition: transform var(--dur-fast) var(--ease-out);
     transform: rotate(0deg);
     flex-shrink: 0;
   }
@@ -219,47 +219,49 @@
   .chevron-spacer {
     display: inline-block;
     width: 12px;
-    margin-right: 4px;
+    margin-right: var(--space-2);
     flex-shrink: 0;
   }
 
+  /* Names are the scan target: neutral hue, carried by weight + brightness. */
   .component-name {
-    color: #e8ab6a;
-    font-weight: bold;
+    color: var(--text-strong);
+    font-weight: 600;
   }
 
   .filename {
-    color: #666;
-    font-size: 11px;
-    margin-left: 6px;
+    color: var(--text-faint);
+    font-size: var(--text-sm);
+    margin-left: var(--space-3);
   }
 
+  /* Render-cost heat. The ms value shown alongside is the non-color cue. */
   .duration {
     margin-left: auto;
-    font-size: 10px;
-    padding: 1px 4px;
-    border-radius: 3px;
+    font-size: var(--text-xs);
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-sm);
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
   }
 
   .duration-normal {
-    background: #2a3a2a;
-    color: #8bc48b;
+    color: var(--text-muted);
   }
 
   .duration-orange {
-    background: #3a3020;
-    color: #e8ab6a;
+    background: var(--heat-warn-bg);
+    color: var(--heat-warn-fg);
   }
 
   .duration-red {
-    background: #3a2020;
-    color: #e86a6a;
+    background: var(--heat-danger-bg);
+    color: var(--heat-danger-fg);
   }
 
   .empty-state {
-    color: #666;
-    padding: 16px;
+    color: var(--text-muted);
+    padding: var(--space-6);
     text-align: center;
     font-style: italic;
   }

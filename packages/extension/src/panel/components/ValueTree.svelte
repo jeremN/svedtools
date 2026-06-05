@@ -76,13 +76,13 @@
 
 <style>
   .vt {
-    font-family: monospace;
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
   }
   .vt-toggle {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 9px;
     padding: 0 2px;
@@ -93,53 +93,54 @@
     width: 14px;
   }
   .vt-preview {
-    color: #ccc;
+    color: var(--text-default);
   }
   .vt-string {
-    color: #6a9955;
+    color: var(--val-string);
   }
   .vt-number {
-    color: #b5cea8;
+    color: var(--val-number);
   }
   .vt-boolean {
-    color: #569cd6;
+    color: var(--val-boolean);
   }
   .vt-null {
-    color: #808080;
+    color: var(--val-null);
     font-style: italic;
   }
   .vt-dom {
-    color: #c586c0;
+    color: var(--val-dom);
   }
   .vt-circular {
-    color: #ce9178;
+    color: var(--val-special);
   }
   .vt-truncated {
-    color: #808080;
+    color: var(--text-faint);
     font-style: italic;
   }
   .vt-object {
-    color: #ccc;
+    color: var(--text-default);
   }
+  /* 1px neutral indentation guide (a tree rail, not a decorative side-stripe). */
   .vt-children {
     margin-left: 14px;
-    border-left: 1px solid #2a2a2a;
-    padding-left: 6px;
+    border-left: 1px solid var(--border-subtle);
+    padding-left: var(--space-3);
   }
   .vt-child {
     display: flex;
-    gap: 6px;
+    gap: var(--space-3);
     align-items: baseline;
   }
   .vt-key {
-    color: #c586c0;
+    color: var(--val-key);
     flex-shrink: 0;
   }
   .vt-meta {
-    color: #666;
+    color: var(--text-muted);
     font-style: italic;
   }
   .vt-error {
-    color: #ce9178;
+    color: var(--status-danger);
   }
 </style>
