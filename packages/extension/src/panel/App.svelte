@@ -81,91 +81,121 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: #1e1e1e;
-    color: #ccc;
+    background: var(--surface-base);
+    color: var(--text-default);
+    font-family: var(--font-ui);
   }
+
+  /* -- Tab bar: active = brighter text + weight + flame underline (native pattern) -- */
   .tabs {
     display: flex;
-    border-bottom: 1px solid #333;
-    background: #252525;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-raised);
   }
   .tab {
-    padding: 8px 16px;
+    padding: var(--space-4) var(--space-6);
     border: none;
     background: none;
-    color: #888;
+    color: var(--text-muted);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--text-md);
     border-bottom: 2px solid transparent;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
   }
   .tab:hover {
-    color: #ccc;
+    color: var(--text-default);
   }
   .tab.active {
-    color: #ff3e00;
-    border-bottom-color: #ff3e00;
+    color: var(--text-strong);
+    font-weight: 600;
+    border-bottom-color: var(--accent);
   }
+
   .panel {
     flex: 1;
     padding: 0;
     overflow: auto;
   }
+
+  /* -- Status bar: dot shape (hollow ring vs solid) + label are the non-color cues -- */
   .status-bar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    background: #1a1a1a;
-    border-top: 1px solid #333;
-    font-size: 11px;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-5);
+    background: var(--surface-sunken);
+    border-top: 1px solid var(--border-subtle);
+    font-size: var(--text-sm);
   }
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
+    box-sizing: border-box;
     flex-shrink: 0;
   }
   .status-dot.disconnected {
-    background: #e54545;
+    background: transparent;
+    border: 1.5px solid var(--status-danger); /* hollow ring = not connected */
   }
   .status-dot.waiting {
-    background: #cca700;
+    background: var(--status-warn);
+    animation: status-pulse 1.4s var(--ease-out) infinite;
   }
   .status-dot.detected {
-    background: #ff3e00;
+    background: var(--accent); /* solid = live */
   }
   .status-text.disconnected {
-    color: #e54545;
+    color: var(--status-danger);
   }
   .status-text.waiting {
-    color: #cca700;
+    color: var(--status-warn);
   }
   .status-text.detected {
-    color: #ff3e00;
+    color: var(--accent-text);
   }
+  @keyframes status-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
   .components-layout {
     display: flex;
     flex-direction: column;
     height: 100%;
   }
+
+  /* -- Search -- */
   .search-bar {
-    padding: 6px 8px;
-    border-bottom: 1px solid #333;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
   }
   .search-bar input {
     width: 100%;
-    padding: 4px 8px;
-    background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 3px;
-    color: #ccc;
-    font-size: 12px;
+    padding: var(--space-2) var(--space-4);
+    background: var(--surface-overlay);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-default);
+    font-size: var(--text-base);
+    font-family: var(--font-ui);
     outline: none;
   }
-  .search-bar input:focus {
-    border-color: #ff3e00;
+  .search-bar input::placeholder {
+    color: var(--text-muted);
   }
+  .search-bar input:focus {
+    border-color: var(--accent);
+  }
+
   .split-pane {
     display: flex;
     flex: 1;
@@ -178,7 +208,7 @@
   }
   .pane-divider {
     width: 1px;
-    background: #333;
+    background: var(--border-subtle);
     flex-shrink: 0;
   }
   .pane-right {
@@ -186,16 +216,18 @@
     overflow-y: auto;
     min-width: 200px;
   }
+
+  /* -- Untested-version banner (warn-tinted, full-width; no side stripe) -- */
   .untested-banner {
-    padding: 6px 12px;
-    background: #3a2e00;
-    border-bottom: 1px solid #cca700;
-    color: #ffd966;
-    font-size: 12px;
+    padding: var(--space-3) var(--space-5);
+    background: color-mix(in oklab, var(--status-warn) 16%, var(--surface-sunken));
+    border-bottom: 1px solid color-mix(in oklab, var(--status-warn) 50%, transparent);
+    color: var(--text-default);
+    font-size: var(--text-base);
     flex-shrink: 0;
   }
   .untested-banner strong {
-    color: #ffefa8;
-    margin-right: 4px;
+    color: var(--status-warn);
+    margin-right: var(--space-2);
   }
 </style>
