@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-05T00:00:00Z",
+  "title": "Design System: Svelte 5 DevTools",
+  "extensions": {
+    "colorMeta": {
+      "flame": {
+        "role": "primary",
+        "displayName": "Svelte Flame",
+        "canonical": "oklch(0.66 0.24 36)",
+        "tonalRamp": [
+          "oklch(0.16 0.24 36)",
+          "oklch(0.27 0.24 36)",
+          "oklch(0.38 0.24 36)",
+          "oklch(0.49 0.24 36)",
+          "oklch(0.6 0.24 36)",
+          "oklch(0.71 0.22 36)",
+          "oklch(0.82 0.16 36)",
+          "oklch(0.93 0.08 36)"
+        ]
+      },
+      "panel-base": {
+        "role": "neutral",
+        "displayName": "Panel Base (dark)",
+        "canonical": "oklch(0.245 0.006 255)",
+        "tonalRamp": [
+          "oklch(0.16 0.006 255)",
+          "oklch(0.245 0.006 255)",
+          "oklch(0.33 0.007 255)",
+          "oklch(0.45 0.008 255)",
+          "oklch(0.58 0.008 255)",
+          "oklch(0.71 0.006 255)",
+          "oklch(0.83 0.005 255)",
+          "oklch(0.95 0.003 255)"
+        ]
+      },
+      "panel-ink": {
+        "role": "neutral",
+        "displayName": "Panel Ink",
+        "canonical": "oklch(0.965 0.003 255)",
+        "tonalRamp": [
+          "oklch(0.27 0.006 255)",
+          "oklch(0.42 0.006 255)",
+          "oklch(0.55 0.005 255)",
+          "oklch(0.66 0.005 255)",
+          "oklch(0.76 0.004 255)",
+          "oklch(0.86 0.004 255)",
+          "oklch(0.92 0.003 255)",
+          "oklch(0.965 0.003 255)"
+        ]
+      },
+      "docs-bg": {
+        "role": "neutral",
+        "displayName": "Docs Paper (light)",
+        "canonical": "oklch(0.985 0.001 255)",
+        "tonalRamp": [
+          "oklch(0.21 0.006 255)",
+          "oklch(0.34 0.006 255)",
+          "oklch(0.5 0.005 255)",
+          "oklch(0.66 0.004 255)",
+          "oklch(0.82 0.004 255)",
+          "oklch(0.9 0.004 255)",
+          "oklch(0.95 0.002 255)",
+          "oklch(0.985 0.001 255)"
+        ]
+      },
+      "docs-ink": {
+        "role": "neutral",
+        "displayName": "Docs Ink",
+        "canonical": "oklch(0.27 0.02 265)",
+        "tonalRamp": [
+          "oklch(0.2 0.02 265)",
+          "oklch(0.27 0.02 265)",
+          "oklch(0.4 0.018 265)",
+          "oklch(0.5 0.015 265)",
+          "oklch(0.62 0.012 265)",
+          "oklch(0.74 0.008 265)",
+          "oklch(0.85 0.005 265)",
+          "oklch(0.94 0.003 265)"
+        ]
+      },
+      "val-string": {
+        "role": "secondary",
+        "displayName": "String Green",
+        "canonical": "oklch(0.78 0.1 150)",
+        "tonalRamp": [
+          "oklch(0.2 0.1 150)",
+          "oklch(0.32 0.1 150)",
+          "oklch(0.44 0.1 150)",
+          "oklch(0.56 0.1 150)",
+          "oklch(0.68 0.1 150)",
+          "oklch(0.78 0.1 150)",
+          "oklch(0.87 0.08 150)",
+          "oklch(0.94 0.05 150)"
+        ]
+      },
+      "val-number": {
+        "role": "secondary",
+        "displayName": "Number Cyan",
+        "canonical": "oklch(0.82 0.07 215)",
+        "tonalRamp": [
+          "oklch(0.22 0.07 215)",
+          "oklch(0.34 0.07 215)",
+          "oklch(0.46 0.07 215)",
+          "oklch(0.58 0.07 215)",
+          "oklch(0.7 0.07 215)",
+          "oklch(0.82 0.07 215)",
+          "oklch(0.89 0.05 215)",
+          "oklch(0.95 0.03 215)"
+        ]
+      },
+      "status-warn": {
+        "role": "tertiary",
+        "displayName": "Warn Amber",
+        "canonical": "oklch(0.8 0.12 85)",
+        "tonalRamp": [
+          "oklch(0.24 0.08 85)",
+          "oklch(0.36 0.1 85)",
+          "oklch(0.48 0.12 85)",
+          "oklch(0.6 0.12 85)",
+          "oklch(0.7 0.12 85)",
+          "oklch(0.8 0.12 85)",
+          "oklch(0.88 0.09 85)",
+          "oklch(0.95 0.05 85)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Docs hero headline only." },
+      "body": { "displayName": "Body / UI", "purpose": "Prose, labels, value rows." },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code, identifiers, values, timings (tabular-nums on numeric columns)."
+      },
+      "label": { "displayName": "Label", "purpose": "Uppercase section labels, <= 2 words." }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default easing for all state transitions; no bounce."
+      },
+      { "name": "dur-fast", "value": "120ms", "purpose": "Tab/chevron/hover color changes." },
+      { "name": "dur-base", "value": "180ms", "purpose": "Larger state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "docs-cards", "value": "720px" },
+      { "name": "docs-shell", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Panel Tabs",
+      "kind": "nav",
+      "refersTo": "panel-tab-active",
+      "description": "Top tab bar of the dark DevTools panel; active = brighter ink + weight + flame underline.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">Components</button><button class=\"ds-tab\">Reactivity</button><button class=\"ds-tab\">Profiler</button></nav>",
+      "css": ".ds-tabs { display: flex; background: oklch(0.285 0.007 255); border-bottom: 1px solid oklch(0.36 0.006 255); font-family: system-ui, sans-serif; } .ds-tab { padding: 8px 16px; border: none; background: none; color: oklch(0.705 0.006 255); font-size: 13px; border-bottom: 2px solid transparent; cursor: pointer; transition: color 120ms cubic-bezier(0.22,1,0.36,1); } .ds-tab:hover { color: oklch(0.86 0.004 255); } .ds-tab-active { color: oklch(0.965 0.003 255); font-weight: 600; border-bottom-color: oklch(0.66 0.24 36); }"
+    },
+    {
+      "name": "Signal Value Row",
+      "kind": "custom",
+      "refersTo": "signal-badge",
+      "description": "A state-inspector row: neutral type chip, neutral identifier, value typed by the functional palette.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-badge\">$state</span><span class=\"ds-name\">count</span><span class=\"ds-val-num\">7</span></div>",
+      "css": ".ds-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: oklch(0.245 0.006 255); border-bottom: 1px solid oklch(0.36 0.006 255); font-family: ui-monospace, Menlo, monospace; font-size: 12px; } .ds-badge { background: oklch(0.325 0.008 255); color: oklch(0.705 0.006 255); font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; } .ds-name { color: oklch(0.965 0.003 255); } .ds-val-num { margin-left: auto; color: oklch(0.82 0.07 215); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Status Indicator",
+      "kind": "custom",
+      "refersTo": "panel-tab-idle",
+      "description": "Connection status; non-color cues (hollow ring vs solid dot) plus a label, never color alone.",
+      "html": "<div class=\"ds-status\"><span class=\"ds-dot ds-dot-on\"></span><span class=\"ds-status-text\">Svelte 5.56</span></div>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: oklch(0.2 0.006 255); font-family: system-ui, sans-serif; font-size: 11px; } .ds-dot { width: 7px; height: 7px; border-radius: 50%; box-sizing: border-box; } .ds-dot-on { background: oklch(0.66 0.24 36); } .ds-dot-off { background: transparent; border: 1.5px solid oklch(0.66 0.18 25); } .ds-status-text { color: oklch(0.74 0.17 45); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Docs primary CTA: legible flame fill, white text (5.4:1).",
+      "html": "<button class=\"ds-btn-primary\">Get started</button>",
+      "css": ".ds-btn-primary { font-family: system-ui, sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.3rem; border: 1px solid transparent; border-radius: 6px; background: oklch(0.55 0.21 32); color: #ffffff; cursor: pointer; transition: background 140ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-primary:hover { background: oklch(0.48 0.19 32); } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.66 0.24 36); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Docs secondary CTA: outline, ink text; hover shifts to flame.",
+      "html": "<button class=\"ds-btn-ghost\">View demos</button>",
+      "css": ".ds-btn-ghost { font-family: system-ui, sans-serif; font-size: 0.92rem; font-weight: 600; padding: 0.6rem 1.3rem; border: 1px solid oklch(0.82 0.006 255); border-radius: 6px; background: transparent; color: oklch(0.27 0.02 265); cursor: pointer; transition: border-color 140ms, color 140ms; } .ds-btn-ghost:hover { border-color: oklch(0.66 0.24 36); color: oklch(0.55 0.21 32); }"
+    },
+    {
+      "name": "Topic Card",
+      "kind": "card",
+      "refersTo": "topic-card",
+      "description": "Docs navigational card; primary variant carries a 10% flame wash. Flat at rest, lifts on hover.",
+      "html": "<a class=\"ds-card ds-card-primary\" href=\"#\"><span class=\"ds-card-head\">Get Started <span class=\"ds-card-arrow\">→</span></span><span class=\"ds-card-desc\">Install the plugin and load the extension in under two minutes.</span></a>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 0.3rem; padding: 1.15rem 1.25rem; border: 1px solid oklch(0.9 0.004 255); border-radius: 10px; background: oklch(0.985 0.001 255); color: oklch(0.27 0.02 265); text-decoration: none; font-family: system-ui, sans-serif; transition: border-color 140ms, transform 140ms cubic-bezier(0.22,1,0.36,1); } .ds-card:hover { border-color: oklch(0.66 0.24 36); transform: translateY(-2px); } .ds-card-primary { background: color-mix(in oklab, oklch(0.66 0.24 36) 10%, oklch(0.985 0.001 255)); border-color: color-mix(in oklab, oklch(0.66 0.24 36) 30%, oklch(0.9 0.004 255)); } .ds-card-head { display: flex; justify-content: space-between; font-weight: 600; font-size: 1rem; } .ds-card-arrow { color: oklch(0.55 0.21 32); transition: transform 140ms; } .ds-card:hover .ds-card-arrow { transform: translateX(3px); } .ds-card-desc { color: oklch(0.5 0.015 265); font-size: 0.88rem; line-height: 1.5; }"
+    },
+    {
+      "name": "Code Block",
+      "kind": "custom",
+      "refersTo": "code-block",
+      "description": "Dark code surface used on the light docs so samples read as the tool itself.",
+      "html": "<pre class=\"ds-code\"><code>svelteDevtools(),</code></pre>",
+      "css": ".ds-code { background: oklch(0.21 0.006 255); color: oklch(0.86 0.004 255); padding: 1.25rem 1.4rem; border-radius: 10px; border: 1px solid oklch(0.9 0.004 255); overflow-x: auto; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; line-height: 1.6; } .ds-code code { font-family: inherit; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Built-In Instrument",
+    "overview": "Make Svelte's runtime reactivity legible without ever pulling focus from the data it reveals. The tool should feel like it shipped inside Chrome DevTools, an instrument that was always there. It spans two surfaces that read as one product: a dark, dense, native panel and a light, calm docs site that carries the same flame identity and renders its code in the panel's own dark surface. The unifying move is restraint: a single Svelte-flame accent spent only where it earns attention, neutral identifiers carried by weight rather than hue, and a calm functional palette reserved for the values themselves.",
+    "keyCharacteristics": [
+      "Data is the hero; chrome is silent.",
+      "One flame accent, spent on exactly one thing in view at a time.",
+      "Identifiers are neutral; meaning comes from weight, position, and shape, not a color zoo.",
+      "Every text/background pair clears WCAG AA; status and type never rely on color alone.",
+      "One token layer per surface; no raw hex in component styles."
+    ],
+    "rules": [
+      {
+        "name": "The One Flame Rule",
+        "body": "The flame marks exactly one thing in the current view at a time (active / selected / focused / detected / dirty). If everything is flame, nothing is. Accent coverage stays under ~10% of any surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral-Identifier Rule",
+        "body": "Component names, signal names, and headings are neutral ink, never a brand or secondary color. Prominence comes from weight and position. The retired tan accent (#e8ab6a) is forbidden.",
+        "section": "colors"
+      },
+      {
+        "name": "The Shape-Not-Hue Rule",
+        "body": "In the reactivity graph, node type is encoded by shape (circle = source, diamond = derived, square = effect), never by color. Colour-blind-safe and flame-only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-For-Data Rule",
+        "body": "Anything that is code, a value, an identifier, or a timing is set in the mono font with tabular-nums on numeric columns. UI labels and prose are set in the UI sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal-Depth Rule",
+        "body": "Layer surfaces with the neutral ramp, not with shadow. Move a surface a step on the ramp before reaching for a border; reach for a border before reaching for a shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The State-Only Motion Rule",
+        "body": "Shadow, lift, and blur appear only as a response to state or to convey reactivity. Nothing animates for decoration, and every animation has a prefers-reduced-motion fallback that resolves to a static end state.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the flame to one role in view at a time; accent coverage stays under ~10% of the surface.",
+      "Do render identifiers in neutral ink and let weight carry prominence.",
+      "Do encode reactivity-graph node type by shape, and pair every status with a shape or label, never color alone.",
+      "Do verify every text/background pair at >= 4.5:1 (>= 3:1 for large/bold).",
+      "Do set values, identifiers, and timings in the mono font with tabular-nums on numeric columns.",
+      "Do convey depth with the neutral ramp first, a 1px hairline second, a shadow never (on the panel).",
+      "Do give every animation a prefers-reduced-motion fallback that lands on a static, visible end state."
+    ],
+    "donts": [
+      "Don't make it look like a generic SaaS dashboard (card grids, gradient hero-metrics, marketing chrome around a dev tool).",
+      "Don't over-brand it with large flame surfaces competing with the data.",
+      "Don't ship a theme that clashes when docked beside Chrome's Elements / Console panels.",
+      "Don't clutter with gray-on-gray, redundant borders, or low-contrast noise.",
+      "Don't use border-left/border-right greater than 1px as a colored accent stripe.",
+      "Don't use gradient text, the hero-metric template, or identical icon-heading-text card grids.",
+      "Don't reintroduce the retired tan identifier color (#e8ab6a) or color-code type badges by kind.",
+      "Don't use em dashes in interface copy."
+    ]
+  }
+}
