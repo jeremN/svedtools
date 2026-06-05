@@ -117,7 +117,7 @@ export default defineConfig({
 
   :global(.doc p > code),
   :global(.doc li > code) {
-    background: #eee;
+    background: var(--code-inline-bg);
     padding: 0.15em 0.4em;
     border-radius: 3px;
   }
@@ -132,7 +132,7 @@ export default defineConfig({
   }
 
   kbd {
-    background: #eee;
+    background: var(--code-inline-bg);
     border: 1px solid var(--border);
     border-radius: 3px;
     padding: 0.1em 0.4em;
