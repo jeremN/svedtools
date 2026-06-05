@@ -16,7 +16,7 @@
         &#9776;
       {/if}
     </button>
-    <a href={resolve('/')} class="logo">svedtools</a>
+    <a href={resolve('/')} class="logo"><span class="logo-mark" aria-hidden="true"></span>svedtools</a>
   </header>
 
   <div class="shell">
@@ -56,27 +56,48 @@
     box-sizing: border-box;
   }
 
-  :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    line-height: 1.6;
-    color: var(--text);
-    background: var(--bg);
+  :global(:root) {
+    /* Light brand theme — flame identity, OKLCH, AA-verified. Code surfaces echo
+       the dark DevTools panel so the docs and the tool read as one product. */
+    --bg: oklch(0.985 0.001 255);
+    --surface: oklch(0.968 0.002 255);
+    --surface-2: oklch(0.935 0.003 255);
+    --text: oklch(0.27 0.02 265);
+    --text-muted: oklch(0.5 0.015 265);
+    --border: oklch(0.9 0.004 255);
+    --border-strong: oklch(0.82 0.006 255);
+
+    --accent: oklch(0.66 0.24 36); /* Svelte flame #ff3e00 — marks + large headings */
+    --accent-strong: oklch(0.55 0.21 32); /* links, buttons, small accent text (AA on bg) */
+    --accent-hover: oklch(0.48 0.19 32);
+    --accent-wash: color-mix(in oklab, var(--accent) 10%, var(--bg));
+
+    --code-bg: oklch(0.21 0.006 255);
+    --code-text: oklch(0.86 0.004 255);
+    --code-inline-bg: var(--surface-2);
+
+    --warn: oklch(0.62 0.13 75);
+    --warn-wash: color-mix(in oklab, var(--warn) 14%, var(--bg));
+
+    --link: var(--accent-strong);
+    --link-hover: var(--accent-hover);
+
+    --sidebar-bg: var(--surface);
+    --sidebar-width: 248px;
+    --topbar-height: 56px;
+
+    --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+    --radius-sm: 6px;
+    --radius-md: 10px;
   }
 
-  :global(:root) {
-    --bg: #fafafa;
-    --text: #1a1a2e;
-    --text-muted: #555;
-    --sidebar-bg: #f0f0f5;
-    --sidebar-width: 240px;
-    --border: #ddd;
-    --accent: #ff3e00;
-    --accent-hover: #e63600;
-    --code-bg: #2d2d2d;
-    --code-text: #ccc;
-    --link: #0066cc;
-    --link-hover: #004499;
-    --topbar-height: 52px;
+  :global(body) {
+    font-family: var(--font-ui);
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
   }
 
   :global(a) {
@@ -87,6 +108,13 @@
   :global(a:hover) {
     color: var(--link-hover);
     text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  :global(:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
 
   .app {
@@ -95,29 +123,39 @@
 
   .topbar {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    inset: 0 0 auto 0;
     height: var(--topbar-height);
-    background: var(--sidebar-bg);
+    background: color-mix(in oklab, var(--bg) 86%, transparent);
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    padding: 0 1rem;
+    padding: 0 1.25rem;
     gap: 0.75rem;
     z-index: 100;
   }
 
   .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 700;
-    font-size: 1.15rem;
-    color: var(--accent);
-    letter-spacing: -0.5px;
+    font-size: 1.1rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
   }
 
   .logo:hover {
-    color: var(--accent-hover);
+    color: var(--text);
     text-decoration: none;
+  }
+
+  .logo-mark {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
   }
 
   .menu-toggle {
@@ -144,20 +182,22 @@
     width: var(--sidebar-width);
     background: var(--sidebar-bg);
     border-right: 1px solid var(--border);
-    padding: 1.5rem 1rem;
+    padding: 1.75rem 1rem;
     overflow-y: auto;
   }
 
   .sidebar section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.75rem;
   }
 
   .sidebar h3 {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
+    font-weight: 600;
     color: var(--text-muted);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
+    padding-left: 0.5rem;
   }
 
   .sidebar ul {
@@ -165,27 +205,31 @@
   }
 
   .sidebar li {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.1rem;
   }
 
   .sidebar a {
     display: block;
-    padding: 0.3rem 0.5rem;
-    border-radius: 4px;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
-    color: var(--text);
+    color: var(--text-muted);
+    transition:
+      color 0.12s,
+      background 0.12s;
   }
 
   .sidebar a:hover {
-    background: var(--border);
+    background: var(--surface-2);
+    color: var(--text);
     text-decoration: none;
   }
 
   .content {
     flex: 1;
     margin-left: var(--sidebar-width);
-    padding: 2rem 3rem;
-    max-width: 52rem;
+    padding: 2.5rem 3rem;
+    max-width: 54rem;
   }
 
   @media (max-width: 768px) {
@@ -205,7 +249,13 @@
 
     .content {
       margin-left: 0;
-      padding: 1.5rem 1rem;
+      padding: 1.5rem 1.15rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar {
+      transition: none;
     }
   }
 </style>
