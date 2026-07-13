@@ -97,7 +97,11 @@ $.get(signal)                 // State read (dependency tracking)`;
       <li>Serializes component data using the shared wire protocol.</li>
       <li>Posts messages to the content script via <code>window.postMessage</code>.</li>
     </ul>
-    <p>The bridge is only active when the DevTools panel is open, keeping the overhead minimal.</p>
+    <p>
+      The bridge always initializes in dev (component tree registration is effectively free), but the per-write tracing
+      work &mdash; stack capture, value serialization, and trace messaging &mdash; only runs while a DevTools panel is
+      connected, keeping the overhead minimal.
+    </p>
   </section>
 </article>
 

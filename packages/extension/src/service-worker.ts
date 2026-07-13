@@ -34,6 +34,17 @@ chrome.runtime.onConnect.addListener((port) => {
 
     contentPorts.set(tabId, port);
 
+    // Panel opened before this page finished loading (or the page reloaded
+    // while the panel stayed open) — tell the new content port right away so
+    // the bridge doesn't sit gated until the next panel lifecycle event.
+    if (panelPorts.has(tabId)) {
+      try {
+        port.postMessage({ type: 'devtools:panel-connected' });
+      } catch {
+        contentPorts.delete(tabId);
+      }
+    }
+
     port.onMessage.addListener((message) => {
       // Validate message type against bridge protocol
       if (!isValidMessage(message, VALID_BRIDGE_TYPES)) return;
@@ -78,6 +89,14 @@ chrome.runtime.onConnect.addListener((port) => {
         panelTabId = initTabId;
         panelPorts.set(initTabId, port);
 
+        // Tell the page a panel is now connected so the bridge un-gates its
+        // per-write hot path (stack capture, serialization, trace messages).
+        try {
+          contentPorts.get(initTabId)?.postMessage({ type: 'devtools:panel-connected' });
+        } catch {
+          contentPorts.delete(initTabId);
+        }
+
         // Replay cached bridge:ready with full version data
         const svelteInfo = svelteTabs.get(initTabId);
         if (svelteInfo) {
@@ -107,6 +126,11 @@ chrome.runtime.onConnect.addListener((port) => {
     port.onDisconnect.addListener(() => {
       if (panelTabId != null) {
         panelPorts.delete(panelTabId);
+        try {
+          contentPorts.get(panelTabId)?.postMessage({ type: 'devtools:panel-disconnected' });
+        } catch {
+          contentPorts.delete(panelTabId);
+        }
       }
     });
   }

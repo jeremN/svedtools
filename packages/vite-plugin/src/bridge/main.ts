@@ -105,6 +105,15 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   }> = [];
   const preCapture = new WeakMap<Value, unknown>();
 
+  // -- Panel connection gating --
+  // Per-write tracing (stack capture, serialization, tracePending push,
+  // trace:update/component:updated messaging) is quiescent until a DevTools
+  // panel actually connects for this tab (see the 'devtools:panel-connected'
+  // / 'devtools:panel-disconnected' cases in the message listener below).
+  // Component mount/unmount events and request/response messages stay
+  // ungated — their cost is per-mount or per-request, not per-write.
+  let panelConnected = false;
+
   function emit(payload: unknown): void {
     window.postMessage({ source: 'svelte-devtools-pro', payload }, window.location.origin);
   }
@@ -301,6 +310,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     },
 
     preMutation(signal) {
+      if (!panelConnected) return;
       if (!signal || typeof signal !== 'object' || !signalMap.has(signal)) return;
       try {
         preCapture.set(signal, safeSerialize(Compat.getValue(signal)));
@@ -314,16 +324,12 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     },
 
     onMutation(signal) {
+      if (!panelConnected) return;
       const meta = signalMap.get(signal);
       if (!meta) return;
 
-      emit({
-        type: 'component:updated',
-        id: meta.componentId,
-        renderDuration: 0,
-        stateIds: [],
-        effectIds: [],
-      });
+      // component:updated is emitted once per distinct component at flush
+      // time (scheduleTraceFlush), not per write — see Step 4 in plan 004.
 
       const stack = new Error().stack || null;
       const oldValue = preCapture.get(signal) ?? null;
@@ -610,25 +616,59 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       const mutations = tracePending.splice(0);
       const domSnap = traceDomMutations.splice(0);
 
-      for (const rootMut of mutations) {
-        const chain = buildChainFromSignal(rootMut._signal);
+      // Coalesce by signalId, preserving first-seen order: one trace:update
+      // per distinct signal instead of one per write. buildChainFromSignal
+      // (a reaction-graph walk) runs once per group, not per mutation.
+      const groups = new Map<string, typeof mutations>();
+      for (const mut of mutations) {
+        const group = groups.get(mut.signalId);
+        if (group) {
+          group.push(mut);
+        } else {
+          groups.set(mut.signalId, [mut]);
+        }
+      }
+
+      const updatedComponentIds = new Set<string>();
+
+      for (const group of groups.values()) {
+        const first = group[0];
+        const last = group[group.length - 1];
+        const chain = buildChainFromSignal(last._signal);
         emit({
           type: 'trace:update',
           trace: {
             id: genId(),
-            timestamp: rootMut.timestamp,
+            timestamp: last.timestamp,
             rootCause: {
-              signalId: rootMut.signalId,
-              signalLabel: rootMut.signalLabel,
-              componentId: rootMut.componentId,
-              componentName: rootMut.componentName,
-              stackTrace: rootMut.stackTrace,
-              oldValue: rootMut.oldValue,
-              newValue: rootMut.newValue,
+              signalId: last.signalId,
+              signalLabel: last.signalLabel,
+              componentId: last.componentId,
+              componentName: last.componentName,
+              stackTrace: last.stackTrace,
+              oldValue: first.oldValue,
+              newValue: last.newValue,
             },
             chain,
             domMutations: domSnap,
+            ...(group.length > 1 ? { coalescedCount: group.length } : {}),
           },
+        });
+        if (last.componentId) updatedComponentIds.add(last.componentId);
+      }
+
+      // component:updated moved here from onMutation: one emit per distinct
+      // component touched in this flush, instead of one per write. This still
+      // drives the panel's selected-component live-refresh (panel/main.ts) —
+      // just at flush granularity. renderDuration: 0 preserves the guard in
+      // components.svelte.ts that ignores this message for render timings.
+      for (const componentId of updatedComponentIds) {
+        emit({
+          type: 'component:updated',
+          id: componentId,
+          renderDuration: 0,
+          stateIds: [],
+          effectIds: [],
         });
       }
     });
@@ -650,6 +690,15 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     if (!msg || !msg.type) return;
 
     switch (msg.type) {
+      case 'devtools:panel-connected':
+        panelConnected = true;
+        break;
+      case 'devtools:panel-disconnected':
+        panelConnected = false;
+        // Stale queue — nothing left to flush for a panel that's gone.
+        tracePending.length = 0;
+        traceDomMutations.length = 0;
+        break;
       case 'profiler:start':
         bridge.startProfiling();
         break;

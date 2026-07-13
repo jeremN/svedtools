@@ -90,6 +90,11 @@
           <span class="signal-label">
             {trace.rootCause.signalLabel ?? 'unnamed'}
           </span>
+          {#if trace.coalescedCount}
+            <span class="coalesced-badge" title="{trace.coalescedCount} writes coalesced into this trace"
+              >&times;{trace.coalescedCount}</span
+            >
+          {/if}
           {#if trace.rootCause.componentName}
             <span class="arrow">&rarr;</span>
             <span class="component-name">{trace.rootCause.componentName}</span>
@@ -283,6 +288,16 @@
 
   .arrow {
     color: var(--text-faint);
+  }
+
+  /* Coalesced-write count: muted, like chain-badge but inline with the label. */
+  .coalesced-badge {
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    flex-shrink: 0;
   }
 
   .component-name {
