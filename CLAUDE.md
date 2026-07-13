@@ -33,7 +33,8 @@ pnpm build          # build all packages
 pnpm check          # svelte-check / tsc across packages
 pnpm test           # unit (all packages)
 pnpm test:integration
-pnpm test:e2e       # Playwright (runtime); needs browsers installed
+pnpm test:e2e       # Playwright (runtime + playground); needs browsers installed
+pnpm test:all       # build + every test suite (unit, integration, both e2e projects)
 node scripts/launch-extension-demo.mjs   # hands-on: isolated Chrome with the extension preloaded
 ```
 

@@ -13,8 +13,8 @@ bridge; the extension renders a DevTools panel that talks to that bridge.
 
 ## Prerequisites
 
-- **Node** ≥ 18
-- **pnpm** ≥ 9 (`corepack enable` will pick up the version pinned in `package.json`)
+- **Node** ≥ 24 (see `.nvmrc`)
+- **pnpm** ≥ 11 (`corepack enable` will pick up the version pinned in `package.json`)
 - **Google Chrome** (the extension loads as an unpacked extension)
 
 ## Install & build
@@ -84,16 +84,19 @@ tests/           integration + e2e (Playwright)
 
 ## Common scripts
 
-| Command                     | What it does                           |
-| --------------------------- | -------------------------------------- |
-| `pnpm build`                | Build all packages                     |
-| `pnpm dev`                  | Playground dev server (:5173)          |
-| `pnpm dev:docs`             | Docs site dev server                   |
-| `pnpm test`                 | Unit tests across packages             |
-| `pnpm test:integration`     | Integration tests (`tests/`)           |
-| `pnpm test:e2e`             | Playwright runtime e2e                 |
-| `pnpm check`                | `svelte-check` / `tsc` across packages |
-| `pnpm lint` / `pnpm format` | ESLint / Prettier                      |
+| Command                     | What it does                                                    |
+| --------------------------- | --------------------------------------------------------------- |
+| `pnpm build`                | Build all packages                                              |
+| `pnpm dev`                  | Playground dev server (:5173)                                   |
+| `pnpm dev:docs`             | Docs site dev server                                            |
+| `pnpm test`                 | Unit tests across packages                                      |
+| `pnpm test:integration`     | Integration tests (`tests/`)                                    |
+| `pnpm test:e2e`             | Playwright runtime + playground e2e                             |
+| `pnpm test:e2e:extension`   | Playwright against the built extension panel                    |
+| `pnpm test:all`             | build + every test suite (unit, integration, both e2e projects) |
+| `pnpm check`                | `svelte-check` / `tsc` across packages                          |
+| `pnpm lint` / `pnpm format` | ESLint / Prettier                                               |
+| `pnpm format:check`         | what the CI lint job runs; must pass before pushing             |
 
 ## Gotchas
 
