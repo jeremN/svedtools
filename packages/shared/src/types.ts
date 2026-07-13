@@ -95,6 +95,8 @@ export interface UpdateTrace {
   };
   chain: UpdateChainStep[];
   domMutations: DomMutation[];
+  /** N identical same-signal writes coalesced into this trace within one flush. */
+  coalescedCount?: number;
 }
 
 // -- Serialization types --

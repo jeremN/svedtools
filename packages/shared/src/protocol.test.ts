@@ -119,6 +119,8 @@ describe('isDevToolsMessage', () => {
       'highlight:component',
       'open-in-editor',
       'tree:request',
+      'devtools:panel-connected',
+      'devtools:panel-disconnected',
     ];
     for (const type of panelTypes) {
       expect(

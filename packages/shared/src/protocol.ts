@@ -161,6 +161,22 @@ export interface TreeRequestMessage {
   type: 'tree:request';
 }
 
+/**
+ * Extension→page lifecycle signals, originated by the service worker (not the
+ * panel itself) when a DevTools panel connects/disconnects for this tab. They
+ * travel the panel→bridge wire direction, so they're part of this union even
+ * though no panel code constructs them directly. The bridge uses these to gate
+ * the per-write hot path (stack capture, serialization, trace messaging) —
+ * see packages/vite-plugin/src/bridge/main.ts.
+ */
+export interface DevtoolsPanelConnectedMessage {
+  type: 'devtools:panel-connected';
+}
+
+export interface DevtoolsPanelDisconnectedMessage {
+  type: 'devtools:panel-disconnected';
+}
+
 /** All messages sent from panel (extension) to bridge (page) */
 export type PanelToBridgeMessage =
   | InspectComponentRequest
@@ -171,7 +187,9 @@ export type PanelToBridgeMessage =
   | GraphRequestMessage
   | HighlightComponentRequest
   | OpenInEditorRequest
-  | TreeRequestMessage;
+  | TreeRequestMessage
+  | DevtoolsPanelConnectedMessage
+  | DevtoolsPanelDisconnectedMessage;
 
 // -- Extension-internal messages (not sent over postMessage wire) --
 
@@ -209,6 +227,8 @@ const VALID_MESSAGE_TYPES = new Set([
   'highlight:component',
   'open-in-editor',
   'tree:request',
+  'devtools:panel-connected',
+  'devtools:panel-disconnected',
 ]);
 
 /** Type guard for our wire messages — validates source AND payload shape */
