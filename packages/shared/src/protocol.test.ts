@@ -118,6 +118,7 @@ describe('isDevToolsMessage', () => {
       'graph:request',
       'highlight:component',
       'open-in-editor',
+      'tree:request',
     ];
     for (const type of panelTypes) {
       expect(

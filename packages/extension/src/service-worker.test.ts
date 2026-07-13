@@ -58,5 +58,6 @@ describe('message type sets', () => {
     expect(VALID_PANEL_TYPES.has('inspect:component')).toBe(true);
     expect(VALID_PANEL_TYPES.has('state:edit')).toBe(true);
     expect(VALID_PANEL_TYPES.has('profiler:start')).toBe(true);
+    expect(VALID_PANEL_TYPES.has('tree:request')).toBe(true);
   });
 });
