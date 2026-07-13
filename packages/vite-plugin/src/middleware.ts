@@ -1,16 +1,22 @@
 import type { ViteDevServer } from 'vite';
 import { readFile, realpath } from 'node:fs/promises';
-import { resolve, isAbsolute, extname, basename } from 'node:path';
+import { resolve, relative, isAbsolute, extname, basename } from 'node:path';
 
 /**
  * Validates that a file path is within the project root,
  * resolving symlinks to prevent traversal.
+ *
+ * Uses node:path's relative() rather than a POSIX-style forward-slash
+ * prefix check so this is correct on Windows too: realpath() there returns
+ * backslash-separated paths, so a forward-slash-based prefix check never
+ * matches a real child path and silently rejects every file.
  */
-async function isWithinRoot(filePath: string, root: string): Promise<boolean> {
+export async function isWithinRoot(filePath: string, root: string): Promise<boolean> {
   try {
     const resolvedPath = await realpath(filePath);
     const resolvedRoot = await realpath(root);
-    return resolvedPath === resolvedRoot || resolvedPath.startsWith(resolvedRoot + '/');
+    const rel = relative(resolvedRoot, resolvedPath);
+    return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
   } catch {
     return false;
   }

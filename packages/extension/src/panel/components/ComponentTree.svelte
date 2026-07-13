@@ -37,6 +37,11 @@
     send({ type: 'highlight:component', id: null });
   }
 
+  function handleOpenInEditor(event: MouseEvent, filename: string): void {
+    event.stopPropagation();
+    send({ type: 'open-in-editor', file: filename, line: 1, column: 1 });
+  }
+
   function handleKeyDown(id: NodeId, event: KeyboardEvent): void {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -68,6 +73,18 @@
     return results;
   });
 </script>
+
+{#snippet fileInfo(filename: string)}
+  <span class="filename">{basename(filename)}</span>
+  <button
+    class="source-btn"
+    title="Open in editor"
+    aria-label="Open {basename(filename)} in editor"
+    onclick={(e) => handleOpenInEditor(e, filename)}
+  >
+    &#8599;
+  </button>
+{/snippet}
 
 {#snippet treeNode(id: NodeId, depth: number)}
   {@const node = componentMap[id]}
@@ -104,7 +121,7 @@
       <span class="component-name">{node.name}</span>
 
       {#if node.filename}
-        <span class="filename">{basename(node.filename)}</span>
+        {@render fileInfo(node.filename)}
       {/if}
 
       {#if node.renderDuration != null}
@@ -138,7 +155,7 @@
     <span class="component-name">{node.name}</span>
 
     {#if node.filename}
-      <span class="filename">{basename(node.filename)}</span>
+      {@render fileInfo(node.filename)}
     {/if}
 
     {#if node.renderDuration != null}
@@ -233,6 +250,39 @@
     color: var(--text-faint);
     font-size: var(--text-sm);
     margin-left: var(--space-3);
+  }
+
+  /* Quiet by default; only earns the accent on hover/focus (one accent, earned). */
+  .source-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: var(--space-2);
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-faint);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    flex-shrink: 0;
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+
+  .tree-row:hover .source-btn,
+  .tree-row:focus-within .source-btn,
+  .source-btn:focus-visible {
+    opacity: 1;
+  }
+
+  .source-btn:hover,
+  .source-btn:focus-visible {
+    color: var(--accent-text);
   }
 
   /* Render-cost heat. The ms value shown alongside is the non-color cue. */
