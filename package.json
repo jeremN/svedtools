@@ -10,7 +10,7 @@
     "check": "pnpm -r check",
     "test": "pnpm -r test",
     "test:integration": "cd tests && npx vitest run --config vitest.config.ts",
-    "test:all": "pnpm run test && pnpm run test:integration && pnpm run test:e2e",
+    "test:all": "pnpm run build && pnpm run test && pnpm run test:integration && pnpm run test:e2e && pnpm run test:e2e:extension",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
