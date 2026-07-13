@@ -686,6 +686,10 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         emit({ type: 'graph:snapshot', nodes: graph.nodes, edges: graph.edges });
         break;
       }
+      case 'tree:request': {
+        emit({ type: 'component:tree', nodes: bridge.getTree() });
+        break;
+      }
       case 'highlight:component': {
         const hlId = msg.id;
         if (hlId === null) {

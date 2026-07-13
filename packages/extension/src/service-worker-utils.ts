@@ -22,6 +22,7 @@ export const VALID_PANEL_TYPES = new Set([
   'graph:request',
   'highlight:component',
   'open-in-editor',
+  'tree:request',
 ]);
 
 export function isValidMessage(message: unknown, validTypes: Set<string>): boolean {

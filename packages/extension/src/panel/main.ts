@@ -1,7 +1,7 @@
 import './tokens.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
-import { connect, onMessage, onDisconnect } from './lib/connection.svelte.js';
+import { connect, send, onMessage, onDisconnect } from './lib/connection.svelte.js';
 import { processMessage, resetState, getSelectedId } from './lib/components.svelte.js';
 import { processGraphMessage, resetGraphState } from './lib/graph.svelte.js';
 import { processProfilerMessage, resetProfilerState } from './lib/profiler.svelte.js';
@@ -14,6 +14,14 @@ onMessage(processGraphMessage);
 onMessage(processProfilerMessage);
 onMessage(processTraceMessage);
 onMessage(processExpansionMessage);
+
+// Request a full component-tree replay whenever a bridge announces itself —
+// covers both late-connect (service-worker replays cached bridge:ready) and
+// a live page reload while the panel stays open. The panel's component:tree
+// handler bulk-replaces state, so repeat requests are idempotent.
+onMessage((m) => {
+  if (m.type === 'bridge:ready') send({ type: 'tree:request' });
+});
 
 // Live drill-down: when the inspected component or the graph changes, debounce a
 // refresh of the selected component snapshot + all open sub-trees.

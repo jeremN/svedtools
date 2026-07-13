@@ -157,6 +157,10 @@ export interface OpenInEditorRequest {
   column: number;
 }
 
+export interface TreeRequestMessage {
+  type: 'tree:request';
+}
+
 /** All messages sent from panel (extension) to bridge (page) */
 export type PanelToBridgeMessage =
   | InspectComponentRequest
@@ -166,7 +170,8 @@ export type PanelToBridgeMessage =
   | ProfilerStopRequest
   | GraphRequestMessage
   | HighlightComponentRequest
-  | OpenInEditorRequest;
+  | OpenInEditorRequest
+  | TreeRequestMessage;
 
 // -- Extension-internal messages (not sent over postMessage wire) --
 
@@ -203,6 +208,7 @@ const VALID_MESSAGE_TYPES = new Set([
   'inspect:component',
   'highlight:component',
   'open-in-editor',
+  'tree:request',
 ]);
 
 /** Type guard for our wire messages — validates source AND payload shape */

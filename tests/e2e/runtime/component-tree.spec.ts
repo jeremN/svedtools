@@ -71,4 +71,35 @@ test.describe('Component Tree', () => {
     const parentExists = tree.some((n: any) => n.id === childNode.parentId);
     expect(parentExists).toBe(true);
   });
+
+  test('tree:request produces a component:tree reply with the mounted components', async ({ page }) => {
+    await page.goto('/demos/counter');
+    await page.waitForTimeout(500);
+
+    const nodes = await page.evaluate(() => {
+      return new Promise<any[]>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('timed out waiting for component:tree')), 5000);
+        window.addEventListener('message', function listener(event) {
+          const data = event.data;
+          if (data && data.source === 'svelte-devtools-pro' && data.payload?.type === 'component:tree') {
+            clearTimeout(timeout);
+            window.removeEventListener('message', listener);
+            resolve(data.payload.nodes);
+          }
+        });
+        window.postMessage(
+          { source: 'svelte-devtools-pro', payload: { type: 'tree:request' } },
+          window.location.origin,
+        );
+      });
+    });
+
+    expect(Array.isArray(nodes)).toBe(true);
+    expect(nodes.length).toBeGreaterThan(0);
+
+    const counter = nodes.find((n: any) => n.name === 'Counter');
+    expect(counter).toBeDefined();
+    expect(counter).toHaveProperty('id');
+    expect(counter).toHaveProperty('children');
+  });
 });
