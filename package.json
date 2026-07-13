@@ -15,7 +15,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:e2e": "playwright test --config tests/playwright.config.ts --project runtime",
+    "test:e2e": "playwright test --config tests/playwright.config.ts --project runtime --project playground",
     "test:e2e:extension": "playwright test --config tests/playwright.config.ts --project extension"
   },
   "engines": {

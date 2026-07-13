@@ -27,11 +27,24 @@ export default defineConfig({
         },
       },
     },
+    {
+      name: 'playground',
+      testDir: './e2e/playground',
+      use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:5174' },
+    },
   ],
-  webServer: {
-    command: 'pnpm --filter @svelte-devtools/docs dev --port 5173',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30000,
-  },
+  webServer: [
+    {
+      command: 'pnpm --filter @svelte-devtools/docs dev --port 5173',
+      port: 5173,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30000,
+    },
+    {
+      command: 'pnpm --filter playground dev -- --port 5174',
+      port: 5174,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30000,
+    },
+  ],
 });
