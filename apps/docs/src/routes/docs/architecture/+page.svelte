@@ -54,8 +54,8 @@ type MessageType =
       </li>
       <li>
         <strong>Content script</strong> &mdash; A Chrome extension content script running in the page context picks up
-        these messages and forwards them to the service worker using
-        <code>chrome.runtime.sendMessage</code>.
+        these messages and relays them to the service worker over a long-lived port opened with
+        <code>chrome.runtime.connect</code> (name <code>svelte-devtools-content</code>).
       </li>
       <li>
         <strong>Service worker</strong> &mdash; The background service worker maintains connections to all open DevTools panel
@@ -77,7 +77,10 @@ type MessageType =
       build time. This means:
     </p>
     <ul>
-      <li>No runtime performance cost when DevTools is disconnected.</li>
+      <li>
+        Mutation tracing is quiescent until a DevTools panel connects; with no panel open, writes skip stack capture,
+        serialization, and messaging entirely.
+      </li>
       <li>Precise source locations from the original <code>.svelte</code> files.</li>
       <li>Full compatibility with Svelte 5's runes and signals system.</li>
     </ul>
