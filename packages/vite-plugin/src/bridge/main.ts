@@ -122,6 +122,27 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     return componentStack.length > 0 ? componentStack[componentStack.length - 1].id : null;
   }
 
+  // -- Dev-server relay (open-in-editor, and future get-source) --
+  // The bridge runs in the page context and has no direct handle to Vite's
+  // WebSocket; it reaches the dev server through Vite's own HMR client,
+  // which the dev server already serves at /@vite/client. The specifier is
+  // routed through a variable (with @vite-ignore) so tsup's bundler, which
+  // fully inlines this file into dist/bridge.js, leaves it as a genuine
+  // runtime dynamic import rather than trying to resolve/bundle it.
+  let viteHot: { send: (event: string, data: unknown) => void } | null = null;
+  async function sendToDevServer(event: string, data: unknown): Promise<void> {
+    try {
+      if (!viteHot) {
+        const clientPath = '/@vite/client';
+        const mod = await import(/* @vite-ignore */ clientPath);
+        viteHot = mod.createHotContext('/__svelte_devtools__');
+      }
+      viteHot!.send(event, data);
+    } catch {
+      console.warn('[svelte-devtools] open-in-editor unavailable (no Vite dev client)');
+    }
+  }
+
   /**
    * Chrome Performance Extensibility API wrapper. The first arg is a display
    * label rendered in the Performance panel — NOT a printf-style format string.
@@ -737,6 +758,16 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       }
       case 'tree:request': {
         emit({ type: 'component:tree', nodes: bridge.getTree() });
+        break;
+      }
+      case 'open-in-editor': {
+        const { file, line, column } = msg as { file?: unknown; line?: unknown; column?: unknown };
+        if (typeof file !== 'string' || !file) break;
+        void sendToDevServer('svelte-devtools:open-in-editor', {
+          file,
+          line: typeof line === 'number' ? line : 1,
+          column: typeof column === 'number' ? column : 1,
+        });
         break;
       }
       case 'highlight:component': {
