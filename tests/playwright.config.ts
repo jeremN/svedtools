@@ -17,15 +17,7 @@ export default defineConfig({
     {
       name: 'extension',
       testDir: './e2e/extension',
-      use: {
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          args: [
-            `--disable-extensions-except=${process.cwd()}/../packages/extension/dist`,
-            `--load-extension=${process.cwd()}/../packages/extension/dist`,
-          ],
-        },
-      },
+      use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'playground',
