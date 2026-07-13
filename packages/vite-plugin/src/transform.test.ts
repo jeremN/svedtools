@@ -86,9 +86,9 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('__svelte_devtools__?.onPush("Counter", $$props, Counter)');
   });
 
-  it('instruments $.pop with onPop call', () => {
+  it('instruments $.pop with onPop call, passing the $ internals namespace', () => {
     const result = transformSvelteOutput(COUNTER_FIXTURE, 'Counter.svelte');
-    expect(result!.code).toContain('__svelte_devtools__?.onPop()');
+    expect(result!.code).toContain('__svelte_devtools__?.onPop($)');
   });
 
   it('instruments $.update with preMutation and onMutation calls', () => {
@@ -188,5 +188,22 @@ function Comp($$anchor, $$props) {
     // Should detect the 'internal' namespace
     expect(result).not.toBeNull();
     expect(result!.code).toContain('__svelte_devtools__?.onPush');
+  });
+
+  it('passes the detected namespace identifier to onPop when it is not literally "$"', () => {
+    const customCode = `
+import * as internal from "svelte/internal/svelte_internal_client";
+
+function Comp($$anchor, $$props) {
+  internal.push($$props, true, Comp);
+  return internal.pop($$exports);
+}
+`.trim();
+    const result = transformSvelteOutput(customCode, 'Comp.svelte');
+    expect(result).not.toBeNull();
+    // onPop must receive the module's own namespace identifier ("internal"),
+    // not a hardcoded "$" — the compiled module may import it under any name.
+    expect(result!.code).toContain('__svelte_devtools__?.onPop(internal)');
+    expect(result!.code).toContain('internal.pop($$exports)');
   });
 });

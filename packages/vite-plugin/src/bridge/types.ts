@@ -53,7 +53,14 @@ declare global {
  */
 export interface SvelteDevtoolsBridge {
   onPush: (name: string, props: unknown, componentFn: ComponentFn) => string;
-  onPop: () => string | undefined;
+  /**
+   * `internals` is the compiled module's own `$` namespace (see
+   * transform.ts instrumentPop), used to register a component-teardown
+   * effect via Compat.registerComponentTeardown. Optional because an old
+   * cached transform (pre-unmount-tracking) may still call `onPop()` bare
+   * during a warm dev-server session.
+   */
+  onPop: (internals?: unknown) => string | undefined;
   registerSignal: (
     signal: Value,
     label: string | null,

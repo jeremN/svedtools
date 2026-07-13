@@ -42,6 +42,21 @@ describe('plugin output verification', () => {
     expect(code).toContain('onPop');
   });
 
+  // onPop must receive the compiled module's own `$` internals namespace
+  // (whatever local identifier the compiler used for the
+  // `svelte/internal/client` import) so the bridge can register a
+  // component-teardown effect (Compat.registerComponentTeardown) without
+  // importing Svelte itself. Unlike the `$.tag` signal-naming capability
+  // below, this doesn't depend on the Svelte minor — the namespace is
+  // always detected by the transform's own import-declaration walk.
+  it('passes the $ internals namespace to onPop', async () => {
+    const code = await getTransformed('basic-counter.svelte');
+    // The namespace identifier is a JS identifier and may itself be "$" (the
+    // conventional local name for the svelte/internal/client import), so
+    // \w+ alone won't match — include $ explicitly.
+    expect(code).toMatch(/onPop\([\w$]+\)/);
+  });
+
   // Signal naming relies on the compiler emitting `$.tag(signal, label)`, a dev-mode
   // helper that early Svelte 5 (<= 5.20) does not produce — there, state/derived are
   // emitted bare, so the transform has nothing to wrap and `registerSignal` is absent.

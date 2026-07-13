@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { isTestedSvelteVersion, TESTED_SVELTE_RANGE, Compat } from './compat.js';
 import type { Reaction } from './types.js';
 
@@ -46,6 +46,46 @@ describe('isTestedSvelteVersion', () => {
     // we only read the major, so a "5-beta"-style tag counts as the tested major.
     expect(() => isTestedSvelteVersion('5-beta')).not.toThrow();
     expect(isTestedSvelteVersion('5-beta')).toBe(true);
+  });
+});
+
+describe('Compat.registerComponentTeardown', () => {
+  it('registers the cleanup via user_effect and invokes cb when the returned cleanup fires (happy path)', () => {
+    // Fake internals namespace: records the effect fn passed to user_effect,
+    // mirroring how `$.user_effect(fn)` is called in compiled output.
+    let recordedEffect: (() => () => void) | null = null;
+    const fakeInternals = {
+      user_effect: (fn: () => () => void) => {
+        recordedEffect = fn;
+      },
+    };
+
+    const cb = vi.fn();
+    const ok = Compat.registerComponentTeardown(fakeInternals, cb);
+
+    expect(ok).toBe(true);
+    expect(recordedEffect).not.toBeNull();
+    // The effect body reads nothing reactive — it just returns the cleanup.
+    const cleanup = recordedEffect!();
+    expect(cb).not.toHaveBeenCalled();
+    cleanup();
+    expect(cb).toHaveBeenCalledOnce();
+  });
+
+  it('returns false when internals has no user_effect function (feature unavailable)', () => {
+    expect(Compat.registerComponentTeardown({}, vi.fn())).toBe(false);
+    expect(Compat.registerComponentTeardown(null, vi.fn())).toBe(false);
+    expect(Compat.registerComponentTeardown({ user_effect: 'not-a-fn' }, vi.fn())).toBe(false);
+  });
+
+  it('returns false (never throws) when user_effect itself throws', () => {
+    const throwingInternals = {
+      user_effect: () => {
+        throw new Error('no active component context');
+      },
+    };
+    expect(() => Compat.registerComponentTeardown(throwingInternals, vi.fn())).not.toThrow();
+    expect(Compat.registerComponentTeardown(throwingInternals, vi.fn())).toBe(false);
   });
 });
 

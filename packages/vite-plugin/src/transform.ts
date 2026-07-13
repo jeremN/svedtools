@@ -87,7 +87,7 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
             break;
 
           case 'pop':
-            instrumentPop(s, node);
+            instrumentPop(s, node, dollarSign);
             hasChanges = true;
             break;
 
@@ -159,13 +159,19 @@ function instrumentPush(s: MagicString, node: any): void {
 
 /**
  * $.pop($$exports)
- * → (window.__svelte_devtools__?.onPop(), $.pop($$exports))
+ * → (window.__svelte_devtools__?.onPop($), $.pop($$exports))
  *
- * Insert onPop before pop runs so we capture render duration.
+ * Insert onPop before pop runs so we capture render duration. We also hand
+ * onPop the compiled module's own internals namespace (the `dollarSign`
+ * identifier the walker matched — NOT a literal "$", since a module can
+ * import it under another local name). This lets the bridge register a
+ * component-teardown effect (via Compat.registerComponentTeardown) using
+ * the module's own `$.user_effect`, without the bridge needing a Svelte
+ * import of its own.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function instrumentPop(s: MagicString, node: any): void {
-  s.prependLeft(node.start, `(window.__svelte_devtools__?.onPop(), `);
+function instrumentPop(s: MagicString, node: any, dollarSign: string): void {
+  s.prependLeft(node.start, `(window.__svelte_devtools__?.onPop(${dollarSign}), `);
   s.appendRight(node.end, ')');
 }
 
