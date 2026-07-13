@@ -180,11 +180,21 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       return id;
     },
 
-    onPop() {
+    onPop(internals?) {
       const node = componentStack.pop();
       if (!node) return;
+      const id = node.id;
       const duration = performance.now() - node._startTime;
       node.renderDuration = duration;
+
+      // Register unmount teardown so the tree/registries don't leak forever.
+      // `internals` is only present when the compiled module was built with
+      // the updated transform (instrumentPop now passes the `$` namespace) —
+      // a warm dev-server session may still be running an older cached
+      // transform that calls onPop() bare, so guard for that.
+      if (internals) {
+        Compat.registerComponentTeardown(internals, () => bridge.removeComponent(id));
+      }
 
       emit({
         type: 'component:mounted',
@@ -238,6 +248,19 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       } else {
         const idx = rootComponents.indexOf(id);
         if (idx !== -1) rootComponents.splice(idx, 1);
+      }
+      // Drop this node's signals/effects from the registries so a dev session
+      // doesn't accumulate every component instance that ever mounted. Each
+      // stateId/effectId is owned exclusively by this node (per-node arrays),
+      // so this can never delete a still-live component's entries.
+      // idToReaction holds WeakRefs — left alone; GC reclaims dead reactions.
+      for (const stateId of node.stateIds) {
+        const sig = idToSignal.get(stateId);
+        if (sig) signalMap.delete(sig);
+        idToSignal.delete(stateId);
+      }
+      for (const effectId of node.effectIds) {
+        effectMap.delete(effectId);
       }
       componentMap.delete(id);
       emit({ type: 'component:unmounted', id });

@@ -4,6 +4,12 @@
   import NestedState from './NestedState.svelte';
   import EffectChain from './EffectChain.svelte';
   import ContextPair from './ContextPair.svelte';
+
+  // e2e fixture for component-unmount tracking (plan 002): toggling this
+  // mounts/unmounts a second, independent Counter instance so a spec can
+  // assert the bridge's tree/registries drop the node on unmount instead of
+  // accumulating stale duplicates.
+  let showToggleCounter = $state(true);
 </script>
 
 <div class="playground">
@@ -13,6 +19,16 @@
   <section>
     <h2>Counter</h2>
     <Counter />
+  </section>
+
+  <section>
+    <h2>Toggle Counter</h2>
+    <button id="toggle-counter" onclick={() => (showToggleCounter = !showToggleCounter)}>
+      {showToggleCounter ? 'Unmount' : 'Mount'}
+    </button>
+    {#if showToggleCounter}
+      <Counter />
+    {/if}
   </section>
 
   <section>

@@ -128,6 +128,25 @@ export const Compat = {
     return r.v;
   },
 
+  // -- Component lifecycle --
+  /**
+   * Registers `cb` to run when the currently-initializing component is destroyed.
+   * Uses the compiled module's own internals namespace (`$.user_effect`) so the
+   * bridge needs no Svelte import. The effect body reads no reactive state, so it
+   * runs once and only its cleanup matters. Returns true when registration
+   * succeeded; false = feature unavailable (caller degrades to legacy behavior).
+   */
+  registerComponentTeardown(internals: unknown, cb: () => void): boolean {
+    const ue = (internals as { user_effect?: unknown } | null)?.user_effect;
+    if (typeof ue !== 'function') return false;
+    try {
+      (ue as (fn: () => () => void) => void)(() => cb);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   // -- Component function metadata --
   getComponentName(fn: ComponentFn | null | undefined): string {
     return fn?.name || 'Unknown';
