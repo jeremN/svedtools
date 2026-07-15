@@ -34,6 +34,11 @@ chrome.runtime.onConnect.addListener((port) => {
 
     contentPorts.set(tabId, port);
 
+    // A new document just started for this tab — reset its state; a fresh
+    // bridge:ready will re-set it if the new page is a Svelte page.
+    svelteTabs.delete(tabId);
+    setBadge(tabId, false);
+
     // Panel opened before this page finished loading (or the page reloaded
     // while the panel stayed open) — tell the new content port right away so
     // the bridge doesn't sit gated until the next panel lifecycle event.
@@ -71,9 +76,14 @@ chrome.runtime.onConnect.addListener((port) => {
     });
 
     port.onDisconnect.addListener(() => {
-      contentPorts.delete(tabId);
-      svelteTabs.delete(tabId);
-      setBadge(tabId, false);
+      // Only clean up if the map still points at THIS port — a delayed
+      // disconnect from an old document must not clobber the state of a new
+      // document that already registered its own port for this tab.
+      if (contentPorts.get(tabId) === port) {
+        contentPorts.delete(tabId);
+        svelteTabs.delete(tabId);
+        setBadge(tabId, false);
+      }
     });
   }
 
@@ -124,7 +134,9 @@ chrome.runtime.onConnect.addListener((port) => {
     });
 
     port.onDisconnect.addListener(() => {
-      if (panelTabId != null) {
+      // Identity guard: a delayed disconnect from an old panel must not
+      // unregister (and notify against) a newer panel for the same tab.
+      if (panelTabId != null && panelPorts.get(panelTabId) === port) {
         panelPorts.delete(panelTabId);
         try {
           contentPorts.get(panelTabId)?.postMessage({ type: 'devtools:panel-disconnected' });
@@ -143,9 +155,15 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   svelteTabs.delete(tabId);
 });
 
-// Reset badge on navigation (page might not have Svelte anymore)
+// Cleanup of last resort: only when the tab has NO live content port. A live
+// port means either a same-document navigation (must NOT wipe — SvelteKit's
+// router fires status:"loading" ~50ms after hydration and bridge:ready is
+// once-per-load) or a real navigation whose port-disconnect handler will do
+// the cleanup. No port means the SW restarted (in-memory state gone, badge
+// orphaned) or the page can't run content scripts (chrome:// etc.) — here
+// this listener is the only hook that can clear a stale badge.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === 'loading') {
+  if (changeInfo.status === 'loading' && !contentPorts.has(tabId)) {
     svelteTabs.delete(tabId);
     setBadge(tabId, false);
   }
