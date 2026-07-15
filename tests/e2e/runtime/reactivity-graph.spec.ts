@@ -172,4 +172,57 @@ test.describe('Reactivity Graph — live updates (plan 008)', () => {
 
     expect(await snapshotCount(page)).toBe(0);
   });
+
+  test('re-subscribing after the SW-restart ordering resumes the live stream', async ({ page }) => {
+    // MV3 SW-death resync (plan 010): when the service worker dies, the
+    // content port's lazy reconnect can reach the bridge with an authoritative
+    // devtools:panel-disconnected (dropping the graph subscription) BEFORE the
+    // panel's own ~1s reconnect re-sends devtools:panel-connected — after
+    // which the panel's connection-reactive effect re-sends graph:subscribe.
+    // Killing a real MV3 service worker isn't feasible from Playwright, so
+    // this pins the wire-level message contract of that ordering instead.
+    await page.goto('/demos/effect-chain');
+    await page.waitForTimeout(500);
+    await simulatePanelConnected(page);
+    await captureGraphSnapshots(page);
+
+    await page.evaluate(() => {
+      window.postMessage(
+        { source: 'svelte-devtools-pro', payload: { type: 'graph:subscribe' } },
+        window.location.origin,
+      );
+    });
+    await expect.poll(() => snapshotCount(page)).toBeGreaterThanOrEqual(1);
+
+    // The restart ordering: authoritative disconnect (drops the subscription),
+    // the panel's reconnect, then the panel effect's re-subscribe.
+    await page.evaluate(() => {
+      window.postMessage(
+        { source: 'svelte-devtools-pro', payload: { type: 'devtools:panel-disconnected' } },
+        window.location.origin,
+      );
+      window.postMessage(
+        { source: 'svelte-devtools-pro', payload: { type: 'devtools:panel-connected' } },
+        window.location.origin,
+      );
+      window.postMessage(
+        { source: 'svelte-devtools-pro', payload: { type: 'graph:subscribe' } },
+        window.location.origin,
+      );
+      // Clear the buffer so only post-resync traffic counts (messages posted
+      // above are handled after this evaluate returns, as in the spec above).
+      (window as unknown as { __graphSnapshots: unknown[] }).__graphSnapshots.length = 0;
+    });
+
+    // The re-subscribe baselines an immediate snapshot...
+    await expect.poll(() => snapshotCount(page)).toBeGreaterThanOrEqual(1);
+
+    // ...and the stream is genuinely live again: a state mutation re-emits on
+    // its own, with no further graph:request/subscribe.
+    await page.evaluate(() => {
+      (window as unknown as { __graphSnapshots: unknown[] }).__graphSnapshots.length = 0;
+    });
+    await page.locator('[data-testid="effect-increment"]').click();
+    await expect.poll(() => snapshotCount(page), { timeout: 3000 }).toBeGreaterThanOrEqual(1);
+  });
 });

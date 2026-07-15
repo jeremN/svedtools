@@ -9,7 +9,7 @@
     setComponentFilter,
   } from '../lib/graph.svelte.js';
   import { getComponentMap } from '../lib/components.svelte.js';
-  import { send } from '../lib/connection.svelte.js';
+  import { send, getConnected } from '../lib/connection.svelte.js';
   import type { NodeId, ReactiveGraphNode } from '@svelte-devtools/shared';
   import ValueTree from './ValueTree.svelte';
   import { resetExpansion } from '../lib/expansion.svelte.js';
@@ -281,8 +281,8 @@
   function handleFilterChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const value = target.value === '' ? null : target.value;
+    // The subscription effect below reads componentFilter and re-subscribes.
     setComponentFilter(value);
-    send({ type: 'graph:subscribe', componentId: value ?? undefined });
   }
 
   function handleRefresh(): void {
@@ -360,8 +360,24 @@
   // -- Subscribe while this tab is visible --
   // App.svelte mounts/destroys this component per tab switch, so mount/
   // cleanup is exactly the visibility span.
+  //
+  // (Re)assert the live-graph subscription whenever the panel⇄SW connection is
+  // (re)established while this tab is visible, and whenever the filter
+  // changes. Covers the MV3 restart race: a content-port reconnect can reach
+  // the bridge with "panel-disconnected" (dropping the subscription) before
+  // this panel's own ~1s reconnect lands — without this effect the graph
+  // would stay frozen until remount. Duplicate subscribes are harmless: the
+  // bridge's graph:subscribe case replaces the previous subscription and
+  // re-baselines the throttle.
+  $effect(() => {
+    if (getConnected()) {
+      send({ type: 'graph:subscribe', componentId: componentFilter ?? undefined });
+    }
+  });
+
+  // Unsubscribe on destroy ONLY — deliberately not an effect cleanup, which
+  // would run on every dependency change and churn subscribe/unsubscribe pairs.
   onMount(() => {
-    send({ type: 'graph:subscribe', componentId: componentFilter ?? undefined });
     return () => {
       send({ type: 'graph:unsubscribe' });
     };
