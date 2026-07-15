@@ -424,9 +424,13 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     },
 
     wrapEffect(fn, effectId) {
-      if (!profilingActive) return fn;
       let reactionRef: Reaction | null = null;
       const wrapped = function wrappedEffect(this: unknown, ...args: unknown[]) {
+        // Call-time gate (F19): wrapping happens once, at effect registration
+        // (= component mount), so gating at wrap time permanently excluded
+        // every component mounted before Record was pressed. The wrapper is
+        // permanent; only the timing work is conditional.
+        if (!profilingActive) return fn.apply(this, args);
         const start = performance.now();
         const result = fn.apply(this, args);
         const duration = performance.now() - start;

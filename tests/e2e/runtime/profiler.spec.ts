@@ -53,4 +53,28 @@ test.describe('Profiler', () => {
     expect(Array.isArray(profilerData.timings)).toBe(true);
     expect(Array.isArray(profilerData.effectTimings)).toBe(true);
   });
+
+  test('profiles effects of components mounted BEFORE recording started (F19)', async ({ page }) => {
+    // effect-chain demo: mounts with a user $effect that re-runs on every
+    // click of its "Increment Source" control (data-testid="effect-increment").
+    // Reused from reactivity-graph.spec.ts's live-update tests.
+    await page.goto('/demos/effect-chain');
+    await page.waitForFunction(() => !!window.__svelte_devtools__);
+    await page.waitForTimeout(500);
+
+    // The component tree is fully mounted BEFORE profiling starts — this is
+    // the exact scenario that used to record nothing (F19: wrapEffect used
+    // to gate at wrap time, which happens once, at mount).
+    await page.evaluate(() => window.__svelte_devtools__!.startProfiling());
+
+    // Re-run the pre-mounted component's user effect a few times.
+    const incrementBtn = page.locator('[data-testid="effect-increment"]');
+    await incrementBtn.click();
+    await incrementBtn.click();
+    await incrementBtn.click();
+
+    const data = await page.evaluate(() => window.__svelte_devtools__!.stopProfiling());
+
+    expect(data.effectTimings.length).toBeGreaterThan(0);
+  });
 });
