@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { isValidMessage, VALID_BRIDGE_TYPES, VALID_PANEL_TYPES } from './service-worker-utils.js';
+import {
+  isValidMessage,
+  isTrustedPanelSender,
+  isValidPanelMessage,
+  VALID_BRIDGE_TYPES,
+  VALID_PANEL_TYPES,
+} from './service-worker-utils.js';
 
 describe('isValidMessage', () => {
   it('accepts valid bridge message types', () => {
@@ -54,6 +60,96 @@ describe('isValidMessage', () => {
   it('rejects graph:subscribe and graph:unsubscribe for the bridge direction', () => {
     expect(isValidMessage({ type: 'graph:subscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
     expect(isValidMessage({ type: 'graph:unsubscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
+  });
+});
+
+describe('isTrustedPanelSender', () => {
+  const EXT_ID = 'abcdefghijklmnopabcdefghijklmnop';
+
+  it('accepts a URL under the extension origin', () => {
+    expect(isTrustedPanelSender('chrome-extension://' + EXT_ID + '/src/panel/index.html', EXT_ID)).toBe(true);
+  });
+
+  it('rejects undefined', () => {
+    expect(isTrustedPanelSender(undefined, EXT_ID)).toBe(false);
+  });
+
+  it('rejects an empty string', () => {
+    expect(isTrustedPanelSender('', EXT_ID)).toBe(false);
+  });
+
+  it('rejects an http(s) URL', () => {
+    expect(isTrustedPanelSender('https://example.com/src/panel/index.html', EXT_ID)).toBe(false);
+  });
+
+  it("rejects another extension's id", () => {
+    expect(isTrustedPanelSender('chrome-extension://someotherextensionid000000000000/index.html', EXT_ID)).toBe(false);
+  });
+
+  it('rejects a URL where the given id is only a prefix of a longer id (trailing slash matters)', () => {
+    // EXT_ID followed by extra characters before the next '/' must NOT match —
+    // that's why the check requires a trailing '/' right after the id, not just startsWith(id).
+    expect(isTrustedPanelSender('chrome-extension://' + EXT_ID + 'evil/index.html', EXT_ID)).toBe(false);
+  });
+});
+
+describe('isValidPanelMessage', () => {
+  it('rejects non-object messages', () => {
+    expect(isValidPanelMessage('hello')).toBe(false);
+    expect(isValidPanelMessage(null)).toBe(false);
+    expect(isValidPanelMessage(undefined)).toBe(false);
+  });
+
+  it('rejects a message with a missing/unknown type', () => {
+    expect(isValidPanelMessage({ id: 'sdt-1' })).toBe(false);
+    expect(isValidPanelMessage({ type: 'not-a-real-type' })).toBe(false);
+  });
+
+  it('rejects a type absent from VALID_PANEL_TYPES even with a plausible payload', () => {
+    expect(isValidPanelMessage({ type: 'component:mounted', id: 'sdt-1' })).toBe(false);
+  });
+
+  it('validates inspect:component payload shape', () => {
+    expect(isValidPanelMessage({ type: 'inspect:component', id: 'sdt-1' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'inspect:component', id: 42 })).toBe(false);
+  });
+
+  it('validates state:edit payload shape', () => {
+    expect(isValidPanelMessage({ type: 'state:edit', signalId: 'sdt-1', path: ['a', 'b'], value: 42 })).toBe(true);
+    expect(isValidPanelMessage({ type: 'state:edit', signalId: 42, path: ['a'], value: 42 })).toBe(false);
+    expect(isValidPanelMessage({ type: 'state:edit', signalId: 'sdt-1', path: ['a', 2], value: 42 })).toBe(false);
+  });
+
+  it('validates state:expand payload shape (non-string path element rejected)', () => {
+    expect(isValidPanelMessage({ type: 'state:expand', rootId: 'sdt-1', path: ['a', 'b'] })).toBe(true);
+    expect(isValidPanelMessage({ type: 'state:expand', rootId: 'sdt-1', path: ['a', 2] })).toBe(false);
+  });
+
+  it('validates graph:request payload shape (componentId optional)', () => {
+    expect(isValidPanelMessage({ type: 'graph:request' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'graph:request', componentId: 'sdt-1' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'graph:request', componentId: 42 })).toBe(false);
+  });
+
+  it('validates highlight:component payload shape (id nullable)', () => {
+    expect(isValidPanelMessage({ type: 'highlight:component', id: 'sdt-1' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'highlight:component', id: null })).toBe(true);
+    expect(isValidPanelMessage({ type: 'highlight:component', id: 42 })).toBe(false);
+  });
+
+  it('validates open-in-editor payload shape', () => {
+    expect(isValidPanelMessage({ type: 'open-in-editor', file: 'a.svelte', line: 1, column: 1 })).toBe(true);
+    expect(isValidPanelMessage({ type: 'open-in-editor', file: 'a.svelte', line: '1', column: 1 })).toBe(false);
+  });
+
+  it('accepts a payload-less valid type', () => {
+    expect(isValidPanelMessage({ type: 'tree:request' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'profiler:start' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'profiler:stop' })).toBe(true);
+  });
+
+  it('is permissive about extra unknown fields on an otherwise-valid message', () => {
+    expect(isValidPanelMessage({ type: 'inspect:component', id: 'sdt-1', extraField: 'whatever' })).toBe(true);
   });
 });
 

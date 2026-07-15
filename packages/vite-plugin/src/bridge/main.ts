@@ -788,11 +788,17 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           } catch {
             rawValue = undefined;
           }
+          let value: unknown = null;
+          try {
+            value = safeSerialize(rawValue);
+          } catch {
+            // serializer fails on hostile getters — fall through with null
+          }
           signals.push({
             id: meta.id,
             label: meta.label,
             type: meta.type || 'state',
-            value: safeSerialize(rawValue),
+            value,
           });
         }
         emit({ type: 'state:snapshot', componentId: targetId, signals });
