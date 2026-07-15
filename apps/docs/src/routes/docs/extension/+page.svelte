@@ -75,8 +75,8 @@
         via <code>window.postMessage</code>.
       </li>
       <li>
-        <strong>Content script</strong> &mdash; runs in the page context, relays messages between the page and the
-        service worker over a long-lived port opened with
+        <strong>Content script</strong> &mdash; runs in Chrome's isolated world, relays messages between the page and
+        the service worker over a long-lived port opened with
         <code>chrome.runtime.connect</code>.
       </li>
       <li>

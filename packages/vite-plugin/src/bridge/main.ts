@@ -864,12 +864,22 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   window.__svelte_devtools__ = bridge;
 
   // Announce readiness — include version probe result so the panel can warn.
-  const { version, tested } = detectSvelteVersion();
+  // Guarded: a throwing probe must never cost us bridge:ready + the observers
+  // below (that is exactly the F15 failure mode this replaces).
+  let svelteVersion = 'unknown';
+  let untested = true;
+  try {
+    const probe = detectSvelteVersion();
+    svelteVersion = probe.version;
+    untested = !probe.tested;
+  } catch {
+    // fall through with unknown/untested
+  }
   emit({
     type: 'bridge:ready',
-    svelteVersion: version,
+    svelteVersion,
     protocolVersion: 1,
-    untested: !tested,
+    untested,
   });
 
   // -- DOM MutationObserver for tracing --
@@ -909,5 +919,5 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     // MutationObserver unsupported (very old browsers); tracing without DOM context is still useful
   }
 
-  console.log('[svelte-devtools] Bridge initialized (Svelte ' + version + (tested ? '' : ', untested') + ')');
+  console.log('[svelte-devtools] Bridge initialized (Svelte ' + svelteVersion + (untested ? ', untested' : '') + ')');
 })();

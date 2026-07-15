@@ -42,4 +42,31 @@ test.describe('Extension loads (MV3)', () => {
     expect(tabs.length, 'chrome.tabs.query({ active: true }) found no active tab').toBeGreaterThan(0);
     expect(tabs[0].id).toBeDefined();
   });
+
+  test('content-port connect with no panel yields an authoritative disconnected signal', async ({ context }) => {
+    const page = await context.newPage();
+
+    // Collect the panel lifecycle messages relayed into the page. Registered
+    // via addInitScript BEFORE navigation so the SW's very first reply to the
+    // content port cannot be missed.
+    await page.addInitScript(() => {
+      window.addEventListener('message', (e) => {
+        const d = e.data;
+        if (d && d.source === 'svelte-devtools-pro' && d.payload?.type?.startsWith('devtools:panel-')) {
+          ((window as unknown as { __panelLifecycle?: string[] }).__panelLifecycle ??= []).push(d.payload.type);
+        }
+      });
+    });
+
+    await page.goto('/');
+    await page.waitForFunction(() => !!window.__svelte_devtools__);
+
+    // No panel is open in this test, so the SW's content-connect branch must
+    // answer with the authoritative "no panel" signal — the F14 resync point
+    // that un-gates a bridge left hot after a service-worker restart wiped the
+    // in-memory port maps.
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __panelLifecycle?: string[] }).__panelLifecycle ?? []))
+      .toContain('devtools:panel-disconnected');
+  });
 });

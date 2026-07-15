@@ -194,12 +194,14 @@ export const TESTED_SVELTE_RANGE = `>=${TESTED_SVELTE_MAJOR}.0.0 <${TESTED_SVELT
 /**
  * Pure classifier — exported for testing. Returns true if `version` is within
  * the tested range (i.e. shares the tested major). Parses only the major so a
- * malformed string ('next', '5-beta', '') never throws; anything that doesn't
- * start with the tested major (including NaN) is treated as untested.
+ * malformed string ('next', '5-beta', '') never throws; non-string input (a
+ * Set, number, null, …) and anything that doesn't start with the tested major
+ * (including NaN) is treated as untested — never a throw.
  *
  * Cheap on purpose — avoids pulling in a semver lib for a single major check.
  */
 export function isTestedSvelteVersion(version: string): boolean {
+  if (typeof version !== 'string') return false;
   if (!version || version === 'unknown') return false;
   const maj = parseInt(version.split('.')[0], 10);
   return maj === TESTED_SVELTE_MAJOR;
@@ -209,8 +211,24 @@ export function isTestedSvelteVersion(version: string): boolean {
  * Detect the running Svelte version and whether it falls inside the
  * tested range. The panel uses this to show a "running an untested
  * Svelte version" banner.
+ *
+ * Svelte 5's disclose-version module publishes versions as a SET:
+ *   ((window.__svelte ??= {}).v ??= new Set()).add(PUBLIC_VERSION)
+ * so `v` is `Set<string>` when any Svelte module loaded before us, absent
+ * otherwise. A string is also accepted defensively (other tooling / older
+ * conventions). Never throws — a failed probe is 'unknown', not a dead bridge.
  */
 export function detectSvelteVersion(): { version: string; tested: boolean } {
-  const version = window.__svelte?.v ?? 'unknown';
+  let version = 'unknown';
+  try {
+    const v: unknown = window.__svelte?.v;
+    if (typeof v === 'string' && v) {
+      version = v;
+    } else if (v instanceof Set && v.size > 0) {
+      version = String(Array.from(v)[0]);
+    }
+  } catch {
+    // hostile or exotic page globals — report unknown rather than throwing
+  }
   return { version, tested: isTestedSvelteVersion(version) };
 }

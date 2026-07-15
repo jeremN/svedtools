@@ -39,7 +39,10 @@ export type ComponentFn = ((...args: unknown[]) => unknown) & {
 declare global {
   interface Window {
     __svelte_devtools__?: SvelteDevtoolsBridge;
-    __svelte?: { v?: string };
+    // Shape published by Svelte 5's disclose-version module:
+    //   ((window.__svelte ??= {}).v ??= new Set()).add(PUBLIC_VERSION)
+    // so `v` is a Set<string> at runtime (one entry per loaded Svelte copy).
+    __svelte?: { v?: Set<string>; uid?: number; h?: unknown };
   }
   interface Element {
     __svelte_meta?: { file?: string; line?: number; column?: number };
