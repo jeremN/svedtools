@@ -63,6 +63,10 @@ test.describe('Reactivity Graph', () => {
     const edge = graph.edges[0];
     expect(edge).toHaveProperty('from');
     expect(edge).toHaveProperty('to');
+
+    // F19 guard: the permanent profiling wrapper must not leak into labels
+    const labels = graph.nodes.map((n: any) => n.label);
+    expect(labels).not.toContain('wrappedEffect');
   });
 
   test('graph:snapshot message is emitted when graph:request is sent', async ({ page }) => {

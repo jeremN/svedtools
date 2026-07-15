@@ -180,8 +180,9 @@ function instrumentPop(s: MagicString, node: any, dollarSign: string): void {
  * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) ?? fn; })())
  *
  * We register the effect AND wrap the function for profiling.
- * wrapEffect returns the original fn when profiling is inactive,
- * or a timing-instrumented wrapper when profiling is active.
+ * wrapEffect always wraps; the timing work is gated on profilingActive
+ * at call time, so the wrapper is a no-op pass-through when profiling
+ * is inactive and timing-instrumented when profiling is active.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function instrumentUserEffect(s: MagicString, node: any): void {

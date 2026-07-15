@@ -61,7 +61,7 @@
   {/if}
 
   <span class="summary">
-    {renderTimings.length} renders, {effectTimings.length} effects
+    {renderTimings.length} mounts, {effectTimings.length} effects
   </span>
 </div>
 
@@ -84,14 +84,14 @@
   <div class="overall-empty">Click Record to start profiling</div>
 {:else if activeSection === 'components'}
   {#if componentStats.length === 0}
-    <div class="empty-state">No render data recorded</div>
+    <div class="empty-state">No mount data recorded — only components that mount while recording appear here</div>
   {:else}
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>Component</th>
-            <th>Renders</th>
+            <th>Mounts</th>
             <th>Total &#9660;</th>
             <th>Avg</th>
             <th>Max</th>
