@@ -35,6 +35,14 @@ test.describe('Demo pages smoke', () => {
       const treeLength = await page.evaluate(() => window.__svelte_devtools__?.getTree().length ?? 0);
       expect(treeLength, `bridge saw no components on ${route}`).toBeGreaterThan(0);
 
+      // F15 regression guard: Svelte's disclose-version publishes
+      // window.__svelte.v as a Set; the bridge once called version.split on it,
+      // throwing during init and killing bridge:ready + the DOM observer.
+      expect(
+        pageErrors.filter((m) => /version\.split/.test(m)),
+        `F15 regression (Set-shaped __svelte.v crashed bridge init) on ${route}`,
+      ).toEqual([]);
+
       expect(pageErrors, `uncaught errors on ${route}:\n${pageErrors.join('\n')}`).toEqual([]);
       expect(svelteErrors, `Svelte runtime errors on ${route}:\n${svelteErrors.join('\n')}`).toEqual([]);
     });

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { isTestedSvelteVersion, TESTED_SVELTE_RANGE, Compat } from './compat.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { isTestedSvelteVersion, detectSvelteVersion, TESTED_SVELTE_RANGE, Compat } from './compat.js';
 import type { Reaction } from './types.js';
 
 describe('Compat.getValue — value signal vs object-state proxy', () => {
@@ -46,6 +46,69 @@ describe('isTestedSvelteVersion', () => {
     // we only read the major, so a "5-beta"-style tag counts as the tested major.
     expect(() => isTestedSvelteVersion('5-beta')).not.toThrow();
     expect(isTestedSvelteVersion('5-beta')).toBe(true);
+  });
+
+  it('never throws on non-string input (Set / number / null)', () => {
+    // The F15 crash shape: Svelte's disclose-version publishes a Set, and the
+    // pre-fix classifier called version.split on it. Non-strings -> untested.
+    for (const bad of [new Set(['5.56.4']), 5, null, undefined, {}] as unknown[]) {
+      const v = bad as unknown as string;
+      expect(() => isTestedSvelteVersion(v)).not.toThrow();
+      expect(isTestedSvelteVersion(v)).toBe(false);
+    }
+  });
+});
+
+// detectSvelteVersion reads window; the vite-plugin vitest env is node, so we
+// stub the global per-case and restore after each test.
+describe('detectSvelteVersion', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('reads the version out of the disclose-version Set (THE F15 bug shape)', () => {
+    // Svelte 5: ((window.__svelte ??= {}).v ??= new Set()).add(PUBLIC_VERSION)
+    // — `v` is a Set, never a string. Pre-fix this threw `version.split is not
+    // a function` and killed the rest of bridge init.
+    vi.stubGlobal('window', { __svelte: { v: new Set(['5.56.4']) } });
+    expect(detectSvelteVersion()).toEqual({ version: '5.56.4', tested: true });
+  });
+
+  it('classifies a non-5 major from a Set as untested', () => {
+    vi.stubGlobal('window', { __svelte: { v: new Set(['4.2.0']) } });
+    expect(detectSvelteVersion()).toEqual({ version: '4.2.0', tested: false });
+  });
+
+  it('still accepts a plain string version defensively', () => {
+    vi.stubGlobal('window', { __svelte: { v: '5.56.4' } });
+    expect(detectSvelteVersion()).toEqual({ version: '5.56.4', tested: true });
+  });
+
+  it('reports unknown when __svelte is absent (bridge won the load-order race)', () => {
+    vi.stubGlobal('window', {});
+    expect(detectSvelteVersion()).toEqual({ version: 'unknown', tested: false });
+  });
+
+  it('reports unknown (no throw) for a numeric v or an empty Set', () => {
+    vi.stubGlobal('window', { __svelte: { v: 5 } });
+    expect(() => detectSvelteVersion()).not.toThrow();
+    expect(detectSvelteVersion()).toEqual({ version: 'unknown', tested: false });
+
+    vi.stubGlobal('window', { __svelte: { v: new Set() } });
+    expect(() => detectSvelteVersion()).not.toThrow();
+    expect(detectSvelteVersion()).toEqual({ version: 'unknown', tested: false });
+  });
+
+  it('reports unknown (no throw) when __svelte is a throwing getter (hostile globals)', () => {
+    const hostileWindow = {};
+    Object.defineProperty(hostileWindow, '__svelte', {
+      get() {
+        throw new Error('boom');
+      },
+    });
+    vi.stubGlobal('window', hostileWindow);
+    expect(() => detectSvelteVersion()).not.toThrow();
+    expect(detectSvelteVersion()).toEqual({ version: 'unknown', tested: false });
   });
 });
 
