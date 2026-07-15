@@ -520,7 +520,16 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           if (!visited.has(reaction)) {
             visited.add(reaction);
             const fn = Compat.getReactionFn(reaction);
-            const reactionLabel = Compat.getLabel(reaction) || fn?.name || null;
+            let effMeta: EffectMeta | null = null;
+            for (const [, eff] of effectMap) {
+              if (eff.fn === fn || eff.wrappedFn === fn) {
+                effMeta = eff;
+                break;
+              }
+            }
+            // Matched effects must never fall back to fn.name — fn is now always the
+            // permanent profiling wrapper (named 'wrappedEffect'), not user code.
+            const reactionLabel = Compat.getLabel(reaction) || (effMeta ? effMeta.label : fn?.name) || null;
             let reactionValue: unknown = null;
             let reactionDirty = false;
             if (isDerived) {
@@ -542,13 +551,8 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
                 }
               }
             }
-            if (!reactionComponentId) {
-              for (const [, eff] of effectMap) {
-                if (eff.fn === fn || eff.wrappedFn === fn) {
-                  reactionComponentId = eff.componentId;
-                  break;
-                }
-              }
+            if (!reactionComponentId && effMeta) {
+              reactionComponentId = effMeta.componentId;
             }
 
             if (!filterComponentId || reactionComponentId === filterComponentId) {
@@ -637,16 +641,20 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         const fn = Compat.getReactionFn(r);
         const isDerived = Compat.isDerived(r);
         let effectId: string | null = null;
+        let effMeta: EffectMeta | null = null;
         if (!isDerived) {
           for (const [eid, eff] of effectMap) {
             if (eff.fn === fn || eff.wrappedFn === fn) {
               effectId = eid;
+              effMeta = eff;
               break;
             }
           }
         }
 
-        const reactionLabel = Compat.getLabel(r) || fn?.name || null;
+        // Matched effects must never fall back to fn.name — fn is now always the
+        // permanent profiling wrapper (named 'wrappedEffect'), not user code.
+        const reactionLabel = Compat.getLabel(r) || (effMeta ? effMeta.label : fn?.name) || null;
         let reactionValue: unknown = null;
         if (isDerived) {
           try {
