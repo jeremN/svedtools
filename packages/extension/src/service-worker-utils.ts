@@ -20,6 +20,8 @@ export const VALID_PANEL_TYPES = new Set([
   'profiler:start',
   'profiler:stop',
   'graph:request',
+  'graph:subscribe',
+  'graph:unsubscribe',
   'highlight:component',
   'open-in-editor',
   'tree:request',

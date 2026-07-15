@@ -145,6 +145,16 @@ export interface GraphRequestMessage {
   componentId?: NodeId;
 }
 
+export interface GraphSubscribeMessage {
+  type: 'graph:subscribe';
+  /** Optional: filter by component (replaces any previous subscription filter) */
+  componentId?: NodeId;
+}
+
+export interface GraphUnsubscribeMessage {
+  type: 'graph:unsubscribe';
+}
+
 export interface HighlightComponentRequest {
   type: 'highlight:component';
   id: NodeId | null;
@@ -185,6 +195,8 @@ export type PanelToBridgeMessage =
   | ProfilerStartRequest
   | ProfilerStopRequest
   | GraphRequestMessage
+  | GraphSubscribeMessage
+  | GraphUnsubscribeMessage
   | HighlightComponentRequest
   | OpenInEditorRequest
   | TreeRequestMessage
@@ -218,6 +230,8 @@ const VALID_MESSAGE_TYPES = new Set([
   'graph:snapshot',
   'graph:update',
   'graph:request',
+  'graph:subscribe',
+  'graph:unsubscribe',
   'profiler:start',
   'profiler:stop',
   'profiler:data',

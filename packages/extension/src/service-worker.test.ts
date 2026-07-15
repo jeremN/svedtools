@@ -45,6 +45,16 @@ describe('isValidMessage', () => {
   it('does not accept bridge types when checking panel types', () => {
     expect(isValidMessage({ type: 'component:mounted' }, VALID_PANEL_TYPES)).toBe(false);
   });
+
+  it('accepts graph:subscribe and graph:unsubscribe for the panel direction', () => {
+    expect(isValidMessage({ type: 'graph:subscribe' }, VALID_PANEL_TYPES)).toBe(true);
+    expect(isValidMessage({ type: 'graph:unsubscribe' }, VALID_PANEL_TYPES)).toBe(true);
+  });
+
+  it('rejects graph:subscribe and graph:unsubscribe for the bridge direction', () => {
+    expect(isValidMessage({ type: 'graph:subscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
+    expect(isValidMessage({ type: 'graph:unsubscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
+  });
 });
 
 describe('message type sets', () => {
@@ -59,5 +69,7 @@ describe('message type sets', () => {
     expect(VALID_PANEL_TYPES.has('state:edit')).toBe(true);
     expect(VALID_PANEL_TYPES.has('profiler:start')).toBe(true);
     expect(VALID_PANEL_TYPES.has('tree:request')).toBe(true);
+    expect(VALID_PANEL_TYPES.has('graph:subscribe')).toBe(true);
+    expect(VALID_PANEL_TYPES.has('graph:unsubscribe')).toBe(true);
   });
 });
