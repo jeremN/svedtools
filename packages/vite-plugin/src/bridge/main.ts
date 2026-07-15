@@ -804,6 +804,9 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         break;
       }
       case 'graph:subscribe':
+        // Reset any pending timer so re-subscribe (filter change) re-baselines
+        // the throttle window atomically.
+        stopGraphSubscription();
         graphSubscribed = true;
         graphFilter = msg.componentId || null;
         // Immediate snapshot so the tab renders without waiting a throttle

@@ -114,8 +114,8 @@
       (() => {
         const byId = new Map(simNodes.map((n) => [n.id, n]));
         if (!nodes.every((n) => byId.has(n.id))) return false;
-        const edgeKeys = new Set(simLinks.map((l) => `${l.from}->${l.to}`));
-        return edges.every((e) => edgeKeys.has(`${e.from}->${e.to}`));
+        const edgeKeys = new Set(simLinks.map((l) => `${l.from}->${l.to}:${l.active}`));
+        return edges.every((e) => edgeKeys.has(`${e.from}->${e.to}:${e.active}`));
       })();
 
     if (sameStructure) {
