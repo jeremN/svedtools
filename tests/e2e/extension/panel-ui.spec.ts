@@ -60,7 +60,10 @@ async function waitForBridgeCached(
 // Waits for the (already-open, already-connected) panel to reach the
 // Svelte-detected state, retrying by reloading the app page — which
 // re-delivers bridge:ready live to the panel's already-registered port —
-// if the initial cache replay lost the race above.
+// if the initial cache replay lost the race above. Only use this where LIVE
+// delivery is an acceptable path to the detected state; the late-connect
+// test must NOT use it, since a live re-delivery would mask a broken
+// cache-replay path (the very thing that test verifies).
 async function waitForPanelDetected(
   panelPage: import('@playwright/test').Page,
   appPage: import('@playwright/test').Page,
@@ -75,6 +78,24 @@ async function waitForPanelDetected(
     }
   }
   await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 3000 });
+}
+
+// Opens a fresh panel page pointed at the given tab (bypassing
+// chrome.devtools.panels.create), stubbing ONLY
+// chrome.devtools.inspectedWindow.tabId — chrome.runtime stays real so the
+// panel talks to the actual service worker.
+async function openPanelPage(
+  context: import('@playwright/test').BrowserContext,
+  extensionOrigin: string,
+  tabId: number,
+): Promise<import('@playwright/test').Page> {
+  const panelPage = await context.newPage();
+  await panelPage.addInitScript((injectedTabId) => {
+    // @ts-expect-error -- test-only stub of the devtools-panel-only API surface
+    window.chrome.devtools = { inspectedWindow: { tabId: injectedTabId } };
+  }, tabId);
+  await panelPage.goto(`${extensionOrigin}/src/panel/index.html`);
+  return panelPage;
 }
 
 test.describe('Panel UI', () => {
@@ -110,6 +131,10 @@ test.describe('Panel UI', () => {
     await expect(panelPage.getByRole('button', { name: 'Tracer' })).toBeVisible();
 
     // The real service worker replays the cached bridge:ready for this tab.
+    // Live delivery (via an app reload inside the retry helper) is an
+    // acceptable path for THIS test — its claim is only that the panel
+    // reaches the detected state — unlike the late-connect test below, which
+    // must stay exclusively on the cache-replay path.
     await waitForPanelDetected(panelPage, appPage);
     await expect(panelPage.locator('.status-text.detected')).toContainText('Svelte');
   });
@@ -128,18 +153,30 @@ test.describe('Panel UI', () => {
     expect(tabId, 'chrome.tabs.query({ active: true }) returned no tab for the app page').toBeDefined();
     await waitForBridgeCached(sw, appPage, tabId!);
 
-    // 3. NOW open the panel (bypassing chrome.devtools.panels.create, same
-    // inspectedWindow.tabId stub as above). The service worker replays the
-    // cached bridge:ready, which the panel's main.ts turns into a
-    // tree:request — the bridge answers with a full component:tree.
-    const panelPage = await context.newPage();
-    await panelPage.addInitScript((injectedTabId) => {
-      // @ts-expect-error -- test-only stub of the devtools-panel-only API surface
-      window.chrome.devtools = { inspectedWindow: { tabId: injectedTabId } };
-    }, tabId);
-    await panelPage.goto(`${extensionOrigin}/src/panel/index.html`);
-
-    await waitForPanelDetected(panelPage, appPage);
+    // 3. NOW open the panel. The service worker replays the cached
+    // bridge:ready, which the panel's main.ts turns into a tree:request —
+    // the bridge answers with a full component:tree.
+    //
+    // Retry discipline: this test exists to verify the CACHE-REPLAY delivery
+    // path, so on failure we must NOT reload the app while a panel is
+    // connected — that would push a live bridge:ready through the panel's
+    // port and turn the test green even if the replay path were broken.
+    // Instead: close the panel, re-establish the cache with no panel open
+    // (app reloads there are pre-panel and legitimate), then open a FRESH
+    // panel. Every attempt reaches the detected state exclusively via the
+    // service worker replaying its cache into a newly connected panel.
+    let panelPage = await openPanelPage(context, extensionOrigin, tabId!);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 3000 });
+        break;
+      } catch {
+        await panelPage.close();
+        await waitForBridgeCached(sw, appPage, tabId!);
+        panelPage = await openPanelPage(context, extensionOrigin, tabId!);
+      }
+    }
+    await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 3000 });
 
     // The replayed component tree should include the mounted Counter.
     await expect(panelPage.locator('.component-name', { hasText: 'Counter' })).toBeVisible({
