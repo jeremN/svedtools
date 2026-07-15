@@ -142,11 +142,3 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   panelPorts.delete(tabId);
   svelteTabs.delete(tabId);
 });
-
-// Reset badge on navigation (page might not have Svelte anymore)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === 'loading') {
-    svelteTabs.delete(tabId);
-    setBadge(tabId, false);
-  }
-});
