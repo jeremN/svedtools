@@ -47,9 +47,22 @@ chrome.runtime.onConnect.addListener((port) => {
     // Panel opened before this page finished loading (or the page reloaded
     // while the panel stayed open) — tell the new content port right away so
     // the bridge doesn't sit gated until the next panel lifecycle event.
+    // The else matters just as much: a content port (re)connecting when NO
+    // panel is registered is the resync point after a service-worker restart
+    // (in-memory port maps lost). Without it the page bridge can keep its
+    // per-write hot path + graph subscription on forever, emitting to a panel
+    // that is gone. Idempotent on ordinary page loads (bridge starts
+    // disconnected). If a panel is actually still open, its own reconnect
+    // (panel:init) re-sends devtools:panel-connected moments later.
     if (panelPorts.has(tabId)) {
       try {
         port.postMessage({ type: 'devtools:panel-connected' });
+      } catch {
+        contentPorts.delete(tabId);
+      }
+    } else {
+      try {
+        port.postMessage({ type: 'devtools:panel-disconnected' });
       } catch {
         contentPorts.delete(tabId);
       }
