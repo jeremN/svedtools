@@ -130,6 +130,30 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     window.postMessage({ source: 'svelte-devtools-pro', payload }, window.location.origin);
   }
 
+  // -- Svelte version probe/announce (F16) --
+  let announcedSvelteVersion = 'unknown';
+
+  // Probe + announce. Called once at init (where it deterministically reports
+  // 'unknown' — the bridge is the first module script in the document, so it
+  // always runs before Svelte's disclose-version), and again from onPop once a
+  // component mount proves the Svelte runtime has executed (F16).
+  // Guarded: a throwing probe must never cost us bridge:ready + the observers
+  // (that was the F15 failure mode).
+  function probeAndAnnounce(): { svelteVersion: string; untested: boolean } {
+    let svelteVersion = 'unknown';
+    let untested = true;
+    try {
+      const probe = detectSvelteVersion();
+      svelteVersion = probe.version;
+      untested = !probe.tested;
+    } catch {
+      // fall through with unknown/untested
+    }
+    announcedSvelteVersion = svelteVersion;
+    emit({ type: 'bridge:ready', svelteVersion, protocolVersion: 1, untested });
+    return { svelteVersion, untested };
+  }
+
   function currentComponentId(): string | null {
     return componentStack.length > 0 ? componentStack[componentStack.length - 1].id : null;
   }
@@ -253,6 +277,13 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         },
       });
       markGraphDirty();
+
+      // F16: the init-time probe always ran before Svelte's disclose-version, so
+      // it announced 'unknown'. Re-probe once a mount proves the runtime executed;
+      // re-announcing overwrites the SW's per-tab cache and updates any open panel.
+      if (announcedSvelteVersion === 'unknown') {
+        probeAndAnnounce();
+      }
 
       if (profilingActive) {
         try {
@@ -864,23 +895,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   window.__svelte_devtools__ = bridge;
 
   // Announce readiness — include version probe result so the panel can warn.
-  // Guarded: a throwing probe must never cost us bridge:ready + the observers
-  // below (that is exactly the F15 failure mode this replaces).
-  let svelteVersion = 'unknown';
-  let untested = true;
-  try {
-    const probe = detectSvelteVersion();
-    svelteVersion = probe.version;
-    untested = !probe.tested;
-  } catch {
-    // fall through with unknown/untested
-  }
-  emit({
-    type: 'bridge:ready',
-    svelteVersion,
-    protocolVersion: 1,
-    untested,
-  });
+  const { svelteVersion, untested } = probeAndAnnounce();
 
   // -- DOM MutationObserver for tracing --
   try {
