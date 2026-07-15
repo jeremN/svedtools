@@ -76,7 +76,8 @@
       </li>
       <li>
         <strong>Content script</strong> &mdash; runs in the page context, relays messages between the page and the
-        service worker using <code>chrome.runtime.sendMessage</code>.
+        service worker over a long-lived port opened with
+        <code>chrome.runtime.connect</code>.
       </li>
       <li>
         <strong>Service worker</strong> &mdash; background script that routes messages to the correct DevTools panel
