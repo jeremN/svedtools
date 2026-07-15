@@ -1,6 +1,7 @@
 import type { ViteDevServer } from 'vite';
 import { readFile, realpath } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, extname, basename } from 'node:path';
+import launchEditor from 'launch-editor';
 
 /**
  * Validates that a file path is within the project root,
@@ -72,21 +73,14 @@ export function createDevtoolsMiddleware(server: ViteDevServer): void {
     const safeLine = Number.isInteger(line) ? line : 1;
     const safeColumn = Number.isInteger(column) ? column : 1;
 
-    // Vite exposes __open-in-editor via middleware
-    const url = `/__open-in-editor?file=${encodeURIComponent(file)}&line=${safeLine}&column=${safeColumn}`;
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const req = { url, method: 'GET', headers: {} } as any;
-    const res = {
-      end() {},
-      writeHead() {
-        return this;
-      },
-      setHeader() {
-        return this;
-      },
-    } as any;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-    server.middlewares.handle(req, res, () => {});
+    // Call launch-editor directly — the same package Vite's own
+    // /__open-in-editor endpoint delegates to. Routing a synthetic req/res
+    // through server.middlewares.handle() breaks on middlewares that expect a
+    // real ServerResponse (Vite 8's stack throws "res argument is required"
+    // before the editor middleware is ever reached).
+    launchEditor(`${filePath}:${safeLine}:${safeColumn}`, undefined, (fileName, errorMsg) => {
+      console.warn(`[svelte-devtools] failed to open ${fileName} in editor: ${errorMsg ?? 'unknown error'}`);
+    });
   });
 
   server.ws.on('svelte-devtools:get-source', async (data: { file: string }, client) => {
