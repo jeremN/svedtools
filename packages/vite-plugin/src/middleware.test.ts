@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { ViteDevServer } from 'vite';
+
+vi.mock('launch-editor', () => ({ default: vi.fn() }));
+
+import launchEditor from 'launch-editor';
 import { isAllowedSourceFile, isWithinRoot, createDevtoolsMiddleware } from './middleware.js';
 
 // -- Source allowlist (Fix 1) --
@@ -118,6 +122,7 @@ describe('createDevtoolsMiddleware', () => {
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'sdt-ws-'));
+    vi.mocked(launchEditor).mockClear();
   });
 
   afterEach(async () => {
@@ -142,35 +147,32 @@ describe('createDevtoolsMiddleware', () => {
   }
 
   describe('svelte-devtools:open-in-editor', () => {
-    it('dispatches the open-in-editor middleware for a file inside root', async () => {
+    it('calls launchEditor with the resolved path for a file inside root', async () => {
       await mkdir(join(root, 'src'));
       await writeFile(join(root, 'src', 'App.svelte'), '');
-      const { server, handlers, middlewaresHandle } = createMockServer();
+      const { server, handlers } = createMockServer();
       createDevtoolsMiddleware(server);
       const handler = handlers.get('svelte-devtools:open-in-editor')!;
 
-      await handler({ file: 'src/App.svelte', line: 10, column: 2 }, { send: vi.fn() });
+      await handler({ file: 'src/App.svelte', line: 5, column: 12 }, { send: vi.fn() });
 
-      expect(middlewaresHandle).toHaveBeenCalledTimes(1);
-      const req = middlewaresHandle.mock.calls[0][0] as { url: string };
-      expect(req.url).toContain('/__open-in-editor?file=');
-      expect(req.url).toContain(encodeURIComponent('src/App.svelte'));
-      expect(req.url).toContain('line=10');
-      expect(req.url).toContain('column=2');
+      expect(launchEditor).toHaveBeenCalledTimes(1);
+      const target = vi.mocked(launchEditor).mock.calls[0][0];
+      expect(target).toBe(`${resolve(root, 'src/App.svelte')}:5:12`);
     });
 
-    it('does not dispatch for a path-traversal attempt outside root', async () => {
-      const { server, handlers, middlewaresHandle } = createMockServer();
+    it('does not call launchEditor for a path-traversal attempt outside root', async () => {
+      const { server, handlers } = createMockServer();
       createDevtoolsMiddleware(server);
       const handler = handlers.get('svelte-devtools:open-in-editor')!;
 
       await handler({ file: '../../etc/passwd', line: 1, column: 1 }, { send: vi.fn() });
 
-      expect(middlewaresHandle).not.toHaveBeenCalled();
+      expect(launchEditor).not.toHaveBeenCalled();
     });
 
-    it('does not dispatch when file is missing or non-string', async () => {
-      const { server, handlers, middlewaresHandle } = createMockServer();
+    it('does not call launchEditor when file is missing or non-string', async () => {
+      const { server, handlers } = createMockServer();
       createDevtoolsMiddleware(server);
       const handler = handlers.get('svelte-devtools:open-in-editor')!;
 
@@ -178,20 +180,19 @@ describe('createDevtoolsMiddleware', () => {
       await handler({ file: 42, line: 1, column: 1 }, { send: vi.fn() });
       await handler({ file: '', line: 1, column: 1 }, { send: vi.fn() });
 
-      expect(middlewaresHandle).not.toHaveBeenCalled();
+      expect(launchEditor).not.toHaveBeenCalled();
     });
 
     it('coerces non-integer line/column to 1', async () => {
       await writeFile(join(root, 'App.svelte'), '');
-      const { server, handlers, middlewaresHandle } = createMockServer();
+      const { server, handlers } = createMockServer();
       createDevtoolsMiddleware(server);
       const handler = handlers.get('svelte-devtools:open-in-editor')!;
 
       await handler({ file: 'App.svelte', line: 3.5, column: Number.NaN }, { send: vi.fn() });
 
-      const req = middlewaresHandle.mock.calls[0][0] as { url: string };
-      expect(req.url).toContain('line=1');
-      expect(req.url).toContain('column=1');
+      const target = vi.mocked(launchEditor).mock.calls[0][0];
+      expect(target).toBe(`${resolve(root, 'App.svelte')}:1:1`);
     });
   });
 
