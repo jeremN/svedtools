@@ -1,0 +1,24 @@
+name: Setup workspace
+description: pnpm + Node 24 + frozen-lockfile install, optionally followed by a full build
+
+inputs:
+  build:
+    description: Run `pnpm run build` after install
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    # No `version:` input on purpose — pnpm comes from package.json#packageManager;
+    # setting both errors (see CLAUDE.md).
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: 'pnpm'
+    - run: pnpm install --frozen-lockfile
+      shell: bash
+    - if: ${{ inputs.build == 'true' }}
+      run: pnpm run build
+      shell: bash
