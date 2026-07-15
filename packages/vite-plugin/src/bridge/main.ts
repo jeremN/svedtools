@@ -114,6 +114,18 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   // ungated — their cost is per-mount or per-request, not per-write.
   let panelConnected = false;
 
+  // -- Live reactivity-graph subscription (plan 008) --
+  // The panel subscribes while the Reactivity tab is visible; the bridge then
+  // re-emits a full graph:snapshot (throttled) whenever the graph may have
+  // changed. Full snapshots, never graph:update deltas — the panel replaces
+  // wholesale, so there is no merge-growth to prune.
+  const GRAPH_EMIT_MIN_INTERVAL_MS = 500;
+  let graphSubscribed = false;
+  let graphFilter: string | null = null;
+  let graphDirty = false;
+  let graphEmitTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastGraphEmit = 0;
+
   function emit(payload: unknown): void {
     window.postMessage({ source: 'svelte-devtools-pro', payload }, window.location.origin);
   }
@@ -240,6 +252,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           renderDuration: duration,
         },
       });
+      markGraphDirty();
 
       if (profilingActive) {
         try {
@@ -294,6 +307,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       }
       componentMap.delete(id);
       emit({ type: 'component:unmounted', id });
+      markGraphDirty();
     },
 
     registerSignal(signal, label, componentId, signalType) {
@@ -692,7 +706,39 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           effectIds: [],
         });
       }
+      markGraphDirty();
     });
+  }
+
+  function emitGraphSnapshot(): void {
+    graphDirty = false;
+    lastGraphEmit = Date.now();
+    const graph = bridge.buildGraph(graphFilter);
+    emit({ type: 'graph:snapshot', nodes: graph.nodes, edges: graph.edges });
+  }
+
+  function stopGraphSubscription(): void {
+    graphSubscribed = false;
+    graphDirty = false;
+    if (graphEmitTimer != null) {
+      clearTimeout(graphEmitTimer);
+      graphEmitTimer = null;
+    }
+  }
+
+  // Trailing-edge throttle: the first dirty mark after a quiet period emits
+  // after whatever remains of the interval; further marks while the timer is
+  // pending coalesce into that one emission.
+  function markGraphDirty(): void {
+    if (!graphSubscribed || !panelConnected) return;
+    graphDirty = true;
+    if (graphEmitTimer != null) return;
+    const delay = Math.max(0, GRAPH_EMIT_MIN_INTERVAL_MS - (Date.now() - lastGraphEmit));
+    graphEmitTimer = setTimeout(() => {
+      graphEmitTimer = null;
+      if (!graphSubscribed || !panelConnected || !graphDirty) return;
+      emitGraphSnapshot();
+    }, delay);
   }
 
   // -- Listen for panel→bridge messages --
@@ -719,6 +765,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         // Stale queue — nothing left to flush for a panel that's gone.
         tracePending.length = 0;
         traceDomMutations.length = 0;
+        stopGraphSubscription();
         break;
       case 'profiler:start':
         bridge.startProfiling();
@@ -756,6 +803,16 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         emit({ type: 'graph:snapshot', nodes: graph.nodes, edges: graph.edges });
         break;
       }
+      case 'graph:subscribe':
+        graphSubscribed = true;
+        graphFilter = msg.componentId || null;
+        // Immediate snapshot so the tab renders without waiting a throttle
+        // interval; also (re)baselines the throttle clock.
+        emitGraphSnapshot();
+        break;
+      case 'graph:unsubscribe':
+        stopGraphSubscription();
+        break;
       case 'tree:request': {
         emit({ type: 'component:tree', nodes: bridge.getTree() });
         break;
