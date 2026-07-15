@@ -59,7 +59,15 @@ test.describe('Profiler', () => {
     // click of its "Increment Source" control (data-testid="effect-increment").
     // Reused from reactivity-graph.spec.ts's live-update tests.
     await page.goto('/demos/effect-chain');
-    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
+    // F19 premise guard: EffectChain itself must be mounted WITH its user
+    // effects registered before profiling starts — a bare non-empty tree
+    // could be just the layout, letting startProfiling() run pre-mount and
+    // silently invalidate the pre-mounted scenario this test exists to pin.
+    await page.waitForFunction(() => {
+      const tree = (window.__svelte_devtools__?.getTree() ?? []) as Array<{ name: string; effectIds: string[] }>;
+      const ec = tree.find((n) => n.name === 'EffectChain');
+      return !!ec && ec.effectIds.length > 0;
+    });
 
     // The component tree is fully mounted BEFORE profiling starts — this is
     // the exact scenario that used to record nothing (F19: wrapEffect used
