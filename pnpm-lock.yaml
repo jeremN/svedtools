@@ -102,6 +102,9 @@ importers:
       '@types/d3-force':
         specifier: ^3.0.10
         version: 3.0.10
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
       svelte:
         specifier: ^5.56.4
         version: 5.56.4(@typescript-eslint/types@8.60.1)

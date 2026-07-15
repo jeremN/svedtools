@@ -8,7 +8,12 @@
  * Also manages the extension badge to indicate Svelte detection.
  */
 
-import { isValidMessage, VALID_BRIDGE_TYPES, VALID_PANEL_TYPES } from './service-worker-utils.js';
+import {
+  isValidMessage,
+  isTrustedPanelSender,
+  isValidPanelMessage,
+  VALID_BRIDGE_TYPES,
+} from './service-worker-utils.js';
 
 // Port maps: tabId → port
 const contentPorts = new Map<number, chrome.runtime.Port>();
@@ -88,6 +93,8 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 
   if (port.name === 'svelte-devtools-panel') {
+    if (!isTrustedPanelSender(port.sender?.url, chrome.runtime.id)) return;
+
     // Panel connection — tab ID comes via init message
     let panelTabId: number | null = null;
 
@@ -119,7 +126,7 @@ chrome.runtime.onConnect.addListener((port) => {
       }
 
       // Validate panel messages against protocol
-      if (!isValidMessage(message, VALID_PANEL_TYPES)) return;
+      if (!isValidPanelMessage(message)) return;
 
       // Forward panel messages to content script
       if (panelTabId == null) return;
