@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test.describe('Extension Panel', () => {
   test('extension loads and bridge detects Svelte on page', async ({ context }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 
 test.describe('State Editing via Bridge', () => {
   test('bridge signalMap exposes signal values for reading', async ({ page }) => {

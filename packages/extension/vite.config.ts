@@ -15,6 +15,11 @@ function copyExtensionAssets(): import('vite').Plugin {
       if (!existsSync(dist)) return;
       copyFileSync(resolve(__dirname, 'manifest.json'), resolve(dist, 'manifest.json'));
       mkdirSync(resolve(dist, 'icons'), { recursive: true });
+      // The manifest references these icons; Chrome refuses to load an unpacked
+      // extension whose manifest points at missing files, so they must ship.
+      for (const icon of ['icon-16.png', 'icon-48.png', 'icon-128.png']) {
+        copyFileSync(resolve(__dirname, 'icons', icon), resolve(dist, 'icons', icon));
+      }
     },
   };
 }
