@@ -40,7 +40,7 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
       className: el.className || null,
     };
   }
-  if (raw instanceof Date) return raw.toISOString();
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? 'Invalid Date' : raw.toISOString();
   if (raw instanceof RegExp) return raw.toString();
   if (raw instanceof Error) return raw.name + ': ' + raw.message;
   if (depth >= MAX_DEPTH) return { __type: 'truncated', reason: 'Max depth reached' };
@@ -55,22 +55,44 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
   }
 
   if (raw instanceof Map) {
-    const entries = Array.from(raw.entries()).slice(0, PREVIEW_KEYS);
-    const body = entries.map(([k, v]) => String(k) + ' => ' + previewVal(v)).join(', ');
+    let size: number;
+    try {
+      size = raw.size;
+    } catch {
+      size = 0;
+    }
+    let body: string;
+    try {
+      const entries = Array.from(raw.entries()).slice(0, PREVIEW_KEYS);
+      body = entries.map(([k, v]) => String(k) + ' => ' + previewVal(v)).join(', ');
+    } catch {
+      body = '...';
+    }
     return {
       __type: 'object',
-      preview: 'Map(' + raw.size + ') {' + body + (raw.size > PREVIEW_KEYS ? ', ...' : '') + '}',
-      childCount: raw.size,
+      preview: 'Map(' + size + ') {' + body + (size > PREVIEW_KEYS ? ', ...' : '') + '}',
+      childCount: size,
     };
   }
 
   if (raw instanceof Set) {
-    const items = Array.from(raw).slice(0, PREVIEW_KEYS);
-    const body = items.map(previewVal).join(', ');
+    let size: number;
+    try {
+      size = raw.size;
+    } catch {
+      size = 0;
+    }
+    let body: string;
+    try {
+      const items = Array.from(raw).slice(0, PREVIEW_KEYS);
+      body = items.map(previewVal).join(', ');
+    } catch {
+      body = '...';
+    }
     return {
       __type: 'object',
-      preview: 'Set(' + raw.size + ') {' + body + (raw.size > PREVIEW_KEYS ? ', ...' : '') + '}',
-      childCount: raw.size,
+      preview: 'Set(' + size + ') {' + body + (size > PREVIEW_KEYS ? ', ...' : '') + '}',
+      childCount: size,
     };
   }
 
@@ -81,7 +103,17 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
     return { __type: 'truncated', reason: 'Cannot enumerate' };
   }
   const previewKeys = keys.slice(0, PREVIEW_KEYS);
-  const preview = previewKeys.map((k) => k + ': ' + previewVal((raw as Record<string, unknown>)[k])).join(', ');
+  const preview = previewKeys
+    .map((k) => {
+      let v: unknown;
+      try {
+        v = (raw as Record<string, unknown>)[k];
+      } catch {
+        return k + ': [getter threw]';
+      }
+      return k + ': ' + previewVal(v);
+    })
+    .join(', ');
   return {
     __type: 'object',
     preview: '{' + preview + (keys.length > PREVIEW_KEYS ? ', ...' : '') + '}',
@@ -101,7 +133,7 @@ export function previewVal(v: unknown): string {
   if (t === 'symbol') return 'Symbol()';
   if (Array.isArray(v)) return 'Array(' + v.length + ')';
   if (t === 'function') return 'fn()';
-  if (v instanceof Date) return (v as Date).toISOString();
+  if (v instanceof Date) return isNaN((v as Date).getTime()) ? 'Invalid Date' : (v as Date).toISOString();
   if (v instanceof Error) return (v as Error).name;
   if (v instanceof Map) return 'Map(' + v.size + ')';
   if (v instanceof Set) return 'Set(' + v.size + ')';

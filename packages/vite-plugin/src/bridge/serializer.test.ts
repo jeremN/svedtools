@@ -99,6 +99,78 @@ describe('safeSerialize regression sanity', () => {
   });
 });
 
+describe('safeSerialize hostile getters and degenerate values (F8)', () => {
+  it('does not throw when a preview property getter throws, and marks it in the preview', () => {
+    const o: Record<string, unknown> = { a: 1, c: 3 };
+    Object.defineProperty(o, 'boom', {
+      enumerable: true,
+      get() {
+        throw new Error('x');
+      },
+    });
+    let result: { __type: string; preview: string; childCount: number } | undefined;
+    expect(() => {
+      result = safeSerialize(o) as { __type: string; preview: string; childCount: number };
+    }).not.toThrow();
+    expect(result!.__type).toBe('object');
+    expect(result!.preview).toContain('boom: [getter threw]');
+    expect(result!.preview).toContain('a: 1');
+    expect(result!.preview).toContain('c: 3');
+    expect(result!.childCount).toBe(3);
+  });
+
+  it('serializes an Invalid Date as "Invalid Date" without throwing', () => {
+    expect(() => safeSerialize(new Date(NaN))).not.toThrow();
+    expect(safeSerialize(new Date(NaN))).toBe('Invalid Date');
+  });
+
+  it('serializes an Invalid Date nested inside an object preview without throwing', () => {
+    let result: { __type: string; preview: string } | undefined;
+    expect(() => {
+      result = safeSerialize({ when: new Date(NaN) }) as { __type: string; preview: string };
+    }).not.toThrow();
+    expect(result!.preview).toContain('when: Invalid Date');
+  });
+
+  it('still round-trips a valid Date to its ISO string', () => {
+    const d = new Date('2024-01-01T00:00:00.000Z');
+    expect(safeSerialize(d)).toBe(d.toISOString());
+  });
+
+  it('does not throw when a Map subclass throws on entries() iteration', () => {
+    class HostileMap extends Map<string, unknown> {
+      entries(): MapIterator<[string, unknown]> {
+        throw new Error('no entries for you');
+      }
+    }
+    const m = new HostileMap([['a', 1]]);
+    let result: { __type: string; preview: string } | undefined;
+    expect(() => {
+      result = safeSerialize(m) as { __type: string; preview: string };
+    }).not.toThrow();
+    expect(result!.__type).toBe('object');
+    expect(result!.preview).toContain('...');
+  });
+
+  it('does not throw when every enumerable property getter throws', () => {
+    const o: Record<string, unknown> = {};
+    for (const key of ['a', 'b', 'c']) {
+      Object.defineProperty(o, key, {
+        enumerable: true,
+        get() {
+          throw new Error(key);
+        },
+      });
+    }
+    let result: { __type: string; preview: string; childCount: number } | undefined;
+    expect(() => {
+      result = safeSerialize(o) as { __type: string; preview: string; childCount: number };
+    }).not.toThrow();
+    expect(result!.preview).toBe('{a: [getter threw], b: [getter threw], c: [getter threw]}');
+    expect(result!.childCount).toBe(3);
+  });
+});
+
 describe('serializeChildrenAtPath', () => {
   it('returns one level of object children keyed by key', () => {
     const out = serializeChildrenAtPath({ a: { b: 1 }, c: 2 }, []) as Record<string, { __type?: string }>;
