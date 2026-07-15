@@ -19,7 +19,7 @@ async function simulatePanelConnected(page: Page): Promise<void> {
 test.describe('Update Tracer', () => {
   test('trace:update message is emitted on state mutation', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
 
     // Set up listener BEFORE triggering the click
@@ -52,7 +52,7 @@ test.describe('Update Tracer', () => {
 
   test('trace includes old and new values in rootCause', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
 
     const traceResult = await page.evaluate(() => {
@@ -87,7 +87,7 @@ test.describe('Update Tracer', () => {
 
   test('no trace:update traffic on state change without a connected panel', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     // Deliberately do NOT simulate panel-connected — the hot path should stay gated.
 
     const result = await page.evaluate(() => {
@@ -113,7 +113,7 @@ test.describe('Update Tracer', () => {
 
   test('5 synchronous writes to the same signal coalesce into a single trace:update', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
 
     const traces = await page.evaluate(() => {
