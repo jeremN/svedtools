@@ -24,10 +24,12 @@ const targetUrl = process.argv[2] ?? 'http://localhost:5173/';
 const userDataDir = resolve(__dirname, '../.demo-chromium-profile');
 
 const context = await chromium.launchPersistentContext(userDataDir, {
-  // Uses your installed Google Chrome instead of Playwright's bundled
-  // Chrome-for-Testing (which gets Gatekeeper-quarantined on macOS first launch).
-  // The --user-data-dir below keeps this profile isolated from your everyday Chrome.
-  channel: 'chrome',
+  // Playwright's Chromium build, same as the e2e fixture: branded Google
+  // Chrome silently ignores --load-extension since 137, so the "chrome"
+  // channel opens a browser with no extension and no error. If launch
+  // complains about a profile created by a newer Chrome, delete
+  // .demo-chromium-profile/.
+  channel: 'chromium',
   headless: false,
   args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
   viewport: { width: 1280, height: 800 },

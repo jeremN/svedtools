@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import {
     getGraphNodes,
     getGraphEdges,
@@ -101,9 +101,17 @@
   // -- D3 force simulation effect --
 
   $effect(() => {
+    // Track ONLY the store inputs. All simNodes/simLinks access (reads AND the
+    // in-place fast-path writes) must stay untracked: this effect assigns the
+    // very $state it would otherwise depend on, which Svelte escalates to
+    // effect_update_depth_exceeded and that kills the whole panel effect tree
+    // (F17 — opening this tab froze the panel).
     const nodes = graphNodes;
     const edges = graphEdges;
+    untrack(() => syncSimulation(nodes, edges));
+  });
 
+  function syncSimulation(nodes: typeof graphNodes, edges: typeof graphEdges): void {
     // Fast path for live value-only snapshots: same node/edge structure means
     // we can update the rendered data in place without reheating the force
     // simulation — no layout jitter while the inspected app mutates state.
@@ -193,11 +201,7 @@
       });
 
     simulation = sim;
-
-    return () => {
-      sim.stop();
-    };
-  });
+  }
 
   // -- Pan handlers --
 
@@ -379,6 +383,8 @@
   // would run on every dependency change and churn subscribe/unsubscribe pairs.
   onMount(() => {
     return () => {
+      simulation?.stop();
+      simulation = null;
       send({ type: 'graph:unsubscribe' });
     };
   });
