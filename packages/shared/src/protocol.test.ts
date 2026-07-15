@@ -116,6 +116,8 @@ describe('isDevToolsMessage', () => {
       'profiler:start',
       'profiler:stop',
       'graph:request',
+      'graph:subscribe',
+      'graph:unsubscribe',
       'highlight:component',
       'open-in-editor',
       'tree:request',
