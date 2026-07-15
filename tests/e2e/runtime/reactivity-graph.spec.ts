@@ -39,7 +39,7 @@ async function getSnapshots(page: Page): Promise<any[]> {
 test.describe('Reactivity Graph', () => {
   test('buildGraph() returns nodes and edges for effect chain page', async ({ page }) => {
     await page.goto('/demos/effect-chain');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const graph = await page.evaluate(() => {
       return window.__svelte_devtools__!.buildGraph(null);
@@ -71,7 +71,7 @@ test.describe('Reactivity Graph', () => {
 
   test('graph:snapshot message is emitted when graph:request is sent', async ({ page }) => {
     await page.goto('/demos/effect-chain');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const snapshot = await page.evaluate(() => {
       return new Promise<any>((resolve) => {
@@ -109,7 +109,7 @@ test.describe('Reactivity Graph', () => {
 test.describe('Reactivity Graph — live updates (plan 008)', () => {
   test('graph:subscribe sends an immediate snapshot, then re-emits live on state mutation', async ({ page }) => {
     await page.goto('/demos/effect-chain');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
     await captureGraphSnapshots(page);
 
@@ -144,7 +144,7 @@ test.describe('Reactivity Graph — live updates (plan 008)', () => {
 
   test('graph:unsubscribe stops the live snapshot stream', async ({ page }) => {
     await page.goto('/demos/effect-chain');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
     await captureGraphSnapshots(page);
 
@@ -186,7 +186,7 @@ test.describe('Reactivity Graph — live updates (plan 008)', () => {
     // Killing a real MV3 service worker isn't feasible from Playwright, so
     // this pins the wire-level message contract of that ordering instead.
     await page.goto('/demos/effect-chain');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
     await simulatePanelConnected(page);
     await captureGraphSnapshots(page);
 

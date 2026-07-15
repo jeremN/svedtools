@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Profiler', () => {
   test('profiler captures render timings', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Set up listener for profiler:data BEFORE triggering stop
     const profilerData = await page.evaluate(() => {
@@ -59,8 +59,7 @@ test.describe('Profiler', () => {
     // click of its "Increment Source" control (data-testid="effect-increment").
     // Reused from reactivity-graph.spec.ts's live-update tests.
     await page.goto('/demos/effect-chain');
-    await page.waitForFunction(() => !!window.__svelte_devtools__);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // The component tree is fully mounted BEFORE profiling starts — this is
     // the exact scenario that used to record nothing (F19: wrapEffect used

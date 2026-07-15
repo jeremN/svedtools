@@ -1,14 +1,14 @@
 import { test, expect } from './fixtures.js';
 
-test.describe('State Editing via Bridge', () => {
+test.describe('State Reading via Bridge', () => {
   test('bridge signalMap exposes signal values for reading', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Click increment a few times
     await page.locator('[data-testid="counter-increment"]').click();
     await page.locator('[data-testid="counter-increment"]').click();
-    await page.waitForTimeout(200);
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('2');
 
     // Verify we can read the signal value from the bridge
     const signalValue = await page.evaluate(() => {
@@ -29,13 +29,13 @@ test.describe('State Editing via Bridge', () => {
 
   test('inspect:component returns state snapshot with current values', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Click increment 3 times
     await page.locator('[data-testid="counter-increment"]').click();
     await page.locator('[data-testid="counter-increment"]').click();
     await page.locator('[data-testid="counter-increment"]').click();
-    await page.waitForTimeout(200);
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('3');
 
     // Get counter component id
     const tree = await page.evaluate(() => {
@@ -80,15 +80,13 @@ test.describe('State Editing via Bridge', () => {
 
   test('signalMap tracks derived values correctly', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Click increment once
     await page.locator('[data-testid="counter-increment"]').click();
-    await page.waitForTimeout(200);
 
     // Read the derived "doubled" value from the DOM
-    const doubledText = await page.locator('[data-testid="counter-doubled"]').textContent();
-    expect(doubledText).toContain('2');
+    await expect(page.locator('[data-testid="counter-doubled"]')).toContainText('2');
 
     // Verify the bridge can enumerate signals including derived ones
     const signalInfo = await page.evaluate(() => {

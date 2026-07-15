@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Component Tree', () => {
   test('bridge initializes and exposes __svelte_devtools__ on the window', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !!window.__svelte_devtools__);
 
     const hasBridge = await page.evaluate(() => {
       return typeof window.__svelte_devtools__ !== 'undefined';
@@ -24,7 +24,7 @@ test.describe('Component Tree', () => {
     });
 
     await page.goto('/demos/counter');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => (window as any).__bridgeReadyReceived === true);
 
     const received = await page.evaluate(() => (window as any).__bridgeReadyReceived);
     expect(received).toBe(true);
@@ -32,7 +32,7 @@ test.describe('Component Tree', () => {
 
   test('getTree() returns component nodes after mount', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const tree = await page.evaluate(() => {
       return window.__svelte_devtools__!.getTree();
@@ -50,7 +50,7 @@ test.describe('Component Tree', () => {
 
   test('component tree includes parent-child relationships on context page', async ({ page }) => {
     await page.goto('/demos/context');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const tree = await page.evaluate(() => {
       return window.__svelte_devtools__!.getTree();
@@ -74,7 +74,7 @@ test.describe('Component Tree', () => {
 
   test('tree:request produces a component:tree reply with the mounted components', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const nodes = await page.evaluate(() => {
       return new Promise<any[]>((resolve, reject) => {

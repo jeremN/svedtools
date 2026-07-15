@@ -3,28 +3,24 @@ import { test, expect } from '@playwright/test';
 test.describe('State Inspection', () => {
   test('counter state updates on click', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Verify initial value
-    const initialValue = await page.locator('[data-testid="counter-value"]').textContent();
-    expect(initialValue?.trim()).toBe('0');
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('0');
 
     // Click increment
     await page.locator('[data-testid="counter-increment"]').click();
-    await page.waitForTimeout(100);
 
     // Verify DOM updated
-    const updatedValue = await page.locator('[data-testid="counter-value"]').textContent();
-    expect(updatedValue?.trim()).toBe('1');
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('1');
 
     // Verify derived value also updated
-    const doubledValue = await page.locator('[data-testid="counter-doubled"]').textContent();
-    expect(doubledValue).toContain('2');
+    await expect(page.locator('[data-testid="counter-doubled"]')).toContainText('2');
   });
 
   test('state snapshot contains registered signals', async ({ page }) => {
     await page.goto('/demos/counter');
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     // Get the component tree to find a component with state
     const tree = await page.evaluate(() => {

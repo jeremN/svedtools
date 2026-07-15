@@ -4,7 +4,7 @@ test.describe('Extension Panel', () => {
   test('extension loads and bridge detects Svelte on page', async ({ context }) => {
     const page = await context.newPage();
     await page.goto('/demos/counter');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => !!window.__svelte_devtools__);
 
     // Verify bridge initialized (extension content script should relay bridge:ready)
     const bridgeReady = await page.evaluate(() => !!window.__svelte_devtools__);
@@ -14,7 +14,7 @@ test.describe('Extension Panel', () => {
   test('bridge exposes component tree through extension context', async ({ context }) => {
     const page = await context.newPage();
     await page.goto('/demos/counter');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
 
     const tree = await page.evaluate(() => {
       return window.__svelte_devtools__!.getTree();
@@ -45,7 +45,7 @@ test.describe('Extension Panel', () => {
     });
 
     await page.goto('/demos/counter');
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => (window as any).__bridgeReadyReceived === true);
 
     const received = await page.evaluate(() => (window as any).__bridgeReadyReceived);
     expect(received).toBe(true);
