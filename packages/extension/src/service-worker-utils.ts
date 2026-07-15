@@ -66,6 +66,10 @@ const PANEL_SHAPE_VALIDATORS: Record<string, ShapeValidator> = {
   'state:edit': (m) => typeof m.signalId === 'string' && isStringArray(m.path),
   'state:expand': (m) => typeof m.rootId === 'string' && isStringArray(m.path),
   'graph:request': (m) => isOptionalString(m.componentId),
+  // Added by plan 008 on main; validator ships ahead of the type landing in
+  // this worktree's VALID_PANEL_TYPES (validators are only consulted after the
+  // allowlist passes, so this entry is inert until the sets merge).
+  'graph:subscribe': (m) => isOptionalString(m.componentId),
   'highlight:component': (m) => m.id === null || typeof m.id === 'string',
   'open-in-editor': (m) => typeof m.file === 'string' && typeof m.line === 'number' && typeof m.column === 'number',
 };

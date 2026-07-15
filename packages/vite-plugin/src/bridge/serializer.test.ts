@@ -169,6 +169,76 @@ describe('safeSerialize hostile getters and degenerate values (F8)', () => {
     expect(result!.preview).toBe('{a: [getter threw], b: [getter threw], c: [getter threw]}');
     expect(result!.childCount).toBe(3);
   });
+
+  it('does not throw on a hostile array Proxy whose length/slice traps throw', () => {
+    const hostile = new Proxy([1, 2, 3], {
+      get(t, p) {
+        if (p === 'length' || p === 'slice') throw new Error('x');
+        return Reflect.get(t, p);
+      },
+    });
+    let result: { __type: string; length: number; preview: string } | undefined;
+    expect(() => {
+      result = safeSerialize(hostile) as { __type: string; length: number; preview: string };
+    }).not.toThrow();
+    expect(result!.__type).toBe('array');
+    expect(result!.length).toBe(0);
+    expect(result!.preview).toContain('...');
+  });
+
+  it('previews a hostile element inside an array as [threw], other elements intact', () => {
+    class HostileSizeMap extends Map<string, unknown> {
+      get size(): number {
+        throw new Error('no size');
+      }
+    }
+    let result: { __type: string; preview: string } | undefined;
+    expect(() => {
+      result = safeSerialize([1, new HostileSizeMap(), 3]) as { __type: string; preview: string };
+    }).not.toThrow();
+    expect(result!.__type).toBe('array');
+    expect(result!.preview).toBe('[1, [threw], 3]');
+  });
+
+  it('previews an object property holding a hostile Map/Set as [threw], siblings intact', () => {
+    class HostileSizeSet extends Set<unknown> {
+      get size(): number {
+        throw new Error('no size');
+      }
+    }
+    let result: { __type: string; preview: string; childCount: number } | undefined;
+    expect(() => {
+      result = safeSerialize({ a: 1, evil: new HostileSizeSet(), z: 'ok' }) as {
+        __type: string;
+        preview: string;
+        childCount: number;
+      };
+    }).not.toThrow();
+    expect(result!.preview).toContain('a: 1');
+    expect(result!.preview).toContain('evil: [threw]');
+    expect(result!.preview).toContain('z: "ok"');
+    expect(result!.childCount).toBe(3);
+  });
+
+  it('degrades an Error subclass with a throwing name getter to "Error"', () => {
+    class HostileError extends Error {
+      get name(): string {
+        throw new Error('no name');
+      }
+    }
+    expect(() => safeSerialize(new HostileError('boom'))).not.toThrow();
+    expect(safeSerialize(new HostileError('boom'))).toBe('Error');
+  });
+
+  it('degrades a RegExp subclass with a throwing toString to "RegExp"', () => {
+    class HostileRegExp extends RegExp {
+      toString(): string {
+        throw new Error('no str');
+      }
+    }
+    expect(() => safeSerialize(new HostileRegExp('a'))).not.toThrow();
+    expect(safeSerialize(new HostileRegExp('a'))).toBe('RegExp');
+  });
 });
 
 describe('serializeChildrenAtPath', () => {

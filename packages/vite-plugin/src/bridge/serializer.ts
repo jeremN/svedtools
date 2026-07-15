@@ -41,16 +41,39 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
     };
   }
   if (raw instanceof Date) return isNaN(raw.getTime()) ? 'Invalid Date' : raw.toISOString();
-  if (raw instanceof RegExp) return raw.toString();
-  if (raw instanceof Error) return raw.name + ': ' + raw.message;
+  if (raw instanceof RegExp) {
+    try {
+      return raw.toString();
+    } catch {
+      return 'RegExp';
+    }
+  }
+  if (raw instanceof Error) {
+    try {
+      return raw.name + ': ' + raw.message;
+    } catch {
+      return 'Error';
+    }
+  }
   if (depth >= MAX_DEPTH) return { __type: 'truncated', reason: 'Max depth reached' };
 
   if (Array.isArray(raw)) {
-    const preview = raw.slice(0, PREVIEW_KEYS).map(previewVal).join(', ');
+    let length: number;
+    try {
+      length = raw.length;
+    } catch {
+      length = 0;
+    }
+    let preview: string;
+    try {
+      preview = raw.slice(0, PREVIEW_KEYS).map(previewVal).join(', ');
+    } catch {
+      preview = '...';
+    }
     return {
       __type: 'array',
-      length: raw.length,
-      preview: '[' + preview + (raw.length > PREVIEW_KEYS ? ', ...' : '') + ']',
+      length,
+      preview: '[' + preview + (length > PREVIEW_KEYS ? ', ...' : '') + ']',
     };
   }
 
@@ -122,22 +145,28 @@ export function safeSerialize(value: unknown, depth = 0, seen: WeakSet<object> =
 }
 
 export function previewVal(v: unknown): string {
-  if (v === null) return 'null';
-  if (v === undefined) return 'undefined';
-  const t = typeof v;
-  if (t === 'string') {
-    const s = v as string;
-    return '"' + (s.length > PREVIEW_STRING_LEN ? s.slice(0, PREVIEW_STRING_LEN) + '...' : s) + '"';
+  // Single never-throw chokepoint: every property read below (length, size,
+  // getTime, name) can hit a hostile getter/Proxy trap — degrade, don't abort.
+  try {
+    if (v === null) return 'null';
+    if (v === undefined) return 'undefined';
+    const t = typeof v;
+    if (t === 'string') {
+      const s = v as string;
+      return '"' + (s.length > PREVIEW_STRING_LEN ? s.slice(0, PREVIEW_STRING_LEN) + '...' : s) + '"';
+    }
+    if (t === 'number' || t === 'boolean' || t === 'bigint') return String(v);
+    if (t === 'symbol') return 'Symbol()';
+    if (Array.isArray(v)) return 'Array(' + v.length + ')';
+    if (t === 'function') return 'fn()';
+    if (v instanceof Date) return isNaN((v as Date).getTime()) ? 'Invalid Date' : (v as Date).toISOString();
+    if (v instanceof Error) return (v as Error).name;
+    if (v instanceof Map) return 'Map(' + v.size + ')';
+    if (v instanceof Set) return 'Set(' + v.size + ')';
+    return '{...}';
+  } catch {
+    return '[threw]';
   }
-  if (t === 'number' || t === 'boolean' || t === 'bigint') return String(v);
-  if (t === 'symbol') return 'Symbol()';
-  if (Array.isArray(v)) return 'Array(' + v.length + ')';
-  if (t === 'function') return 'fn()';
-  if (v instanceof Date) return isNaN((v as Date).getTime()) ? 'Invalid Date' : (v as Date).toISOString();
-  if (v instanceof Error) return (v as Error).name;
-  if (v instanceof Map) return 'Map(' + v.size + ')';
-  if (v instanceof Set) return 'Set(' + v.size + ')';
-  return '{...}';
 }
 
 const MAX_CHILDREN = 100;
