@@ -104,6 +104,32 @@
     const nodes = graphNodes;
     const edges = graphEdges;
 
+    // Fast path for live value-only snapshots: same node/edge structure means
+    // we can update the rendered data in place without reheating the force
+    // simulation — no layout jitter while the inspected app mutates state.
+    const sameStructure =
+      simNodes.length > 0 &&
+      simNodes.length === nodes.length &&
+      simLinks.length === edges.length &&
+      (() => {
+        const byId = new Map(simNodes.map((n) => [n.id, n]));
+        if (!nodes.every((n) => byId.has(n.id))) return false;
+        const edgeKeys = new Set(simLinks.map((l) => `${l.from}->${l.to}`));
+        return edges.every((e) => edgeKeys.has(`${e.from}->${e.to}`));
+      })();
+
+    if (sameStructure) {
+      const byId = new Map(simNodes.map((n) => [n.id, n]));
+      for (const n of nodes) {
+        const sn = byId.get(n.id)!;
+        sn.value = n.value;
+        sn.dirty = n.dirty;
+        sn.label = n.label;
+      }
+      simNodes = [...simNodes];
+      return;
+    }
+
     if (simulation) {
       simulation.stop();
       simulation = null;
@@ -256,7 +282,7 @@
     const target = event.target as HTMLSelectElement;
     const value = target.value === '' ? null : target.value;
     setComponentFilter(value);
-    send({ type: 'graph:request', componentId: value ?? undefined });
+    send({ type: 'graph:subscribe', componentId: value ?? undefined });
   }
 
   function handleRefresh(): void {
@@ -331,10 +357,14 @@
     };
   });
 
-  // -- Request initial graph data on mount --
-
+  // -- Subscribe while this tab is visible --
+  // App.svelte mounts/destroys this component per tab switch, so mount/
+  // cleanup is exactly the visibility span.
   onMount(() => {
-    send({ type: 'graph:request' });
+    send({ type: 'graph:subscribe', componentId: componentFilter ?? undefined });
+    return () => {
+      send({ type: 'graph:unsubscribe' });
+    };
   });
 </script>
 
