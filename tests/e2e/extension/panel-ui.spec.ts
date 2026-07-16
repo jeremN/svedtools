@@ -118,4 +118,40 @@ test.describe('Panel UI', () => {
       timeout: 5000,
     });
   });
+
+  test('editing a state value from the panel updates the inspected app', async ({ context }) => {
+    const appPage = await context.newPage();
+    await appPage.goto('/demos/counter');
+    await appPage.waitForFunction(() => !!window.__svelte_devtools__);
+
+    const { sw, origin: extensionOrigin } = await getExtensionOrigin(context);
+    const tabId = await getActiveTabId(sw);
+    expect(tabId, 'chrome.tabs.query({ active: true }) returned no tab for the app page').toBeDefined();
+    await waitForBridgeCached(sw, tabId!);
+
+    const panelPage = await openPanelPage(context, extensionOrigin, tabId!);
+    await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 5000 });
+
+    // Select Counter — ComponentTree sends inspect:component on click.
+    await panelPage.locator('.component-name', { hasText: 'Counter' }).first().click();
+
+    // The count row renders an editable value; doubled must NOT be editable.
+    const countRow = panelPage.locator('.signal-row', { hasText: 'count' }).first();
+    const valueButton = countRow.locator('button.vt-editable').first();
+    await expect(valueButton).toBeVisible({ timeout: 5000 });
+    const doubledRow = panelPage.locator('.signal-row', { hasText: 'doubled' }).first();
+    await expect(doubledRow.locator('button.vt-editable')).toHaveCount(0);
+
+    await valueButton.dblclick();
+    const editor = countRow.locator('input.vt-editor');
+    await editor.fill('42');
+    await editor.press('Enter');
+
+    // Real end-to-end proof: the inspected app updated through Svelte itself.
+    await expect(appPage.locator('[data-testid="counter-value"]')).toHaveText('42');
+    await expect(appPage.locator('[data-testid="counter-doubled"]')).toContainText('84');
+
+    // And the panel converges on the authoritative value via its live refresh.
+    await expect(countRow).toContainText('42');
+  });
 });
