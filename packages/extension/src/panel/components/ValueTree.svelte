@@ -37,15 +37,23 @@
 
   function commitEdit(): void {
     if (!editing) return;
-    editing = false;
     const trimmed = draft.trim();
-    let parsed: unknown = draft;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(trimmed);
     } catch {
-      // Not JSON — send the raw input as a plain string, so typing hello
-      // works without quotes ("hello", 42, true, null all parse as JSON).
+      // Not valid JSON. Only string fields accept the raw text as a
+      // convenience (typing hello without quotes); for number/boolean/null
+      // fields a failed parse would silently change the value's type (e.g.
+      // clearing a number field would commit ''), so refuse the commit and
+      // leave the value unchanged — type changes must be explicit valid JSON.
+      if (typeof value !== 'string') {
+        editing = false;
+        return;
+      }
+      parsed = draft;
     }
+    editing = false;
     send({ type: 'state:edit', signalId: rootId, path, value: parsed });
     // Fire-and-forget: the debounced live refresh re-inspects the component
     // and re-fetches open drill-down paths, so the UI converges on the
