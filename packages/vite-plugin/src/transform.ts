@@ -194,7 +194,7 @@ function instrumentPop(s: MagicString, node: any, dollarSign: string): void {
 
 /**
  * $.user_effect(fn)
- * → $.user_effect((() => { const __eid = window.__svelte_devtools__?.registerEffect(fn); return window.__svelte_devtools__?.wrapEffect(fn, __eid) ?? fn; })())
+ * → $.user_effect((() => { const __sdt_fn = fn; const __sdt_eid = window.__svelte_devtools__?.registerEffect(__sdt_fn); return window.__svelte_devtools__?.wrapEffect(__sdt_fn, __sdt_eid) ?? __sdt_fn; })())
  *
  * We register the effect AND wrap the function for profiling.
  * wrapEffect always wraps; the timing work is gated on profilingActive
@@ -209,10 +209,10 @@ function instrumentUserEffect(s: MagicString, node: any): void {
   // Wrap the fn argument with an IIFE that registers + wraps for profiling.
   // Uses prependLeft/appendRight (additive) rather than overwrite to avoid
   // conflicts with inner instrumentation (e.g. $.set inside the effect body).
-  s.prependLeft(args[0].start, `(() => { const __fn = `);
+  s.prependLeft(args[0].start, `(() => { const __sdt_fn = `);
   s.appendRight(
     args[0].end,
-    `; const __eid = window.__svelte_devtools__?.registerEffect(__fn); return window.__svelte_devtools__?.wrapEffect(__fn, __eid) ?? __fn; })()`,
+    `; const __sdt_eid = window.__svelte_devtools__?.registerEffect(__sdt_fn); return window.__svelte_devtools__?.wrapEffect(__sdt_fn, __sdt_eid) ?? __sdt_fn; })()`,
   );
 }
 
@@ -247,13 +247,13 @@ function instrumentTemplateEffect(s: MagicString, node: any, componentFnName: st
 
 /**
  * $.set(signal, value)
- * → (() => { const __sig = signal; window.__svelte_devtools__?.preMutation(__sig); const __r = $.set(__sig, value); window.__svelte_devtools__?.onMutation(__sig); return __r; })()
+ * → (() => { const __sdt_sig = signal; window.__svelte_devtools__?.preMutation(__sdt_sig); const __sdt_r = $.set(__sdt_sig, value); window.__svelte_devtools__?.onMutation(__sdt_sig); return __sdt_r; })()
  *
  * preMutation captures the old value (signal.v) before set runs.
  * onMutation is called AFTER set to read the new value from the signal.
  * This enables "Why Did This Update?" tracing by comparing old vs new.
  *
- * The signal target is bound to a `__sig` temp and evaluated EXACTLY ONCE,
+ * The signal target is bound to a `__sdt_sig` temp and evaluated EXACTLY ONCE,
  * then reused for pre/onMutation and rewritten in place inside the original
  * call. A naive comma-expression would splice the target three times, so a
  * non-trivial target (e.g. a class `$state` member `this.#count`, or an index
@@ -275,20 +275,20 @@ function instrumentSet(s: MagicString, node: any): void {
   // Bind the target once, rewrite it in place, capture old/new around set
   s.prependLeft(
     node.start,
-    `(() => { const __sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sig); const __r = `,
+    `(() => { const __sdt_sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sdt_sig); const __sdt_r = `,
   );
-  s.update(args[0].start, args[0].end, '__sig');
-  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sig); return __r; })()`);
+  s.update(args[0].start, args[0].end, '__sdt_sig');
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sdt_sig); return __sdt_r; })()`);
 }
 
 /**
  * $.update(signal) or $.update(signal, -1)
- * → (() => { const __sig = signal; preMutation(__sig); const __r = $.update(__sig, -1); onMutation(__sig); return __r; })()
+ * → (() => { const __sdt_sig = signal; preMutation(__sdt_sig); const __sdt_r = $.update(__sdt_sig, -1); onMutation(__sdt_sig); return __sdt_r; })()
  *
  * IIFE preserves $.update's return value (used in `return $.update(count, -1)`)
  * while capturing pre/post mutation values for update tracing.
  *
- * Like instrumentSet, the signal target is bound to `__sig` and evaluated
+ * Like instrumentSet, the signal target is bound to `__sdt_sig` and evaluated
  * EXACTLY ONCE, then rewritten in place inside the original call so a
  * non-trivial target isn't re-evaluated. Overwriting args[0] is safe — a
  * compiled mutation target never contains instrumentable `$.method()` calls,
@@ -305,15 +305,15 @@ function instrumentUpdate(s: MagicString, node: any): void {
   // Bind the target once, rewrite it in place; IIFE preserves $.update's return value
   s.prependLeft(
     node.start,
-    `(() => { const __sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sig); const __r = `,
+    `(() => { const __sdt_sig = ${signalArg}; window.__svelte_devtools__?.preMutation(__sdt_sig); const __sdt_r = `,
   );
-  s.update(args[0].start, args[0].end, '__sig');
-  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sig); return __r; })()`);
+  s.update(args[0].start, args[0].end, '__sdt_sig');
+  s.appendRight(node.end, `; window.__svelte_devtools__?.onMutation(__sdt_sig); return __sdt_r; })()`);
 }
 
 /**
  * $.tag($.state(0), 'count') or $.tag($.derived(...), 'doubled')
- * → (() => { const __s = $.tag($.state(0), 'count'); window.__svelte_devtools__?.registerSignal(__s, 'count'); return __s; })()
+ * → (() => { const __sdt_s = $.tag($.state(0), 'count'); window.__svelte_devtools__?.registerSignal(__sdt_s, 'count'); return __sdt_s; })()
  *
  * Also handles $.tag_proxy($.proxy({...}), 'label') — object/array/Map $state.
  * Both forms share the same (value, stringLiteralLabel) shape and return the value,
@@ -331,6 +331,6 @@ function instrumentTag(s: MagicString, node: any): void {
 
   const label = JSON.stringify(labelNode.value);
 
-  s.prependLeft(node.start, `(() => { const __s = `);
-  s.appendRight(node.end, `; window.__svelte_devtools__?.registerSignal(__s, ${label}); return __s; })()`);
+  s.prependLeft(node.start, `(() => { const __sdt_s = `);
+  s.appendRight(node.end, `; window.__svelte_devtools__?.registerSignal(__sdt_s, ${label}); return __sdt_s; })()`);
 }

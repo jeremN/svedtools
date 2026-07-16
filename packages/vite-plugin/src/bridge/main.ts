@@ -388,9 +388,10 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       effectMap.set(id, {
         id,
         // The transform's IIFE binds every instrumented effect as
-        // `const __fn = ...` (transform.ts instrumentUserEffect), so an
-        // inferred name of '__fn' is meaningless — record null instead.
-        label: fnName && fnName !== '__fn' ? fnName : null,
+        // `const __sdt_fn = ...` (transform.ts instrumentUserEffect), so an
+        // inferred name in the reserved `__sdt_` temp namespace is meaningless
+        // — record null instead. Prefix-matched so it survives temp renames.
+        label: fnName && !fnName.startsWith('__sdt_') ? fnName : null,
         componentId: owner,
         fn,
         wrappedFn: null,

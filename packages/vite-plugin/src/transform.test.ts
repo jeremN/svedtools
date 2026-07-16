@@ -149,12 +149,12 @@ describe('transformSvelteOutput', () => {
 
   it('instruments $.update with preMutation and onMutation calls', () => {
     const result = transformSvelteOutput(COUNTER_FIXTURE, 'Counter.svelte');
-    // Target is bound to a temp and evaluated once, so pre/onMutation read __sig
-    expect(result!.code).toContain('const __sig = count;');
-    expect(result!.code).toContain('__svelte_devtools__?.preMutation(__sig)');
-    expect(result!.code).toContain('__svelte_devtools__?.onMutation(__sig)');
+    // Target is bound to a temp and evaluated once, so pre/onMutation read __sdt_sig
+    expect(result!.code).toContain('const __sdt_sig = count;');
+    expect(result!.code).toContain('__svelte_devtools__?.preMutation(__sdt_sig)');
+    expect(result!.code).toContain('__svelte_devtools__?.onMutation(__sdt_sig)');
     // The rewritten call passes the temp, preserving the original delta arg
-    expect(result!.code).toContain('$.update(__sig, -1)');
+    expect(result!.code).toContain('$.update(__sdt_sig, -1)');
   });
 
   it('instruments $.user_effect with registerEffect call', () => {
@@ -188,6 +188,33 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('$.get(__fn)');
   });
 
+  it('mutation instrumentation does not shadow a user binding literally named __sig', () => {
+    // A user whose own signal is named __sig: the pre-sweep transform bound the
+    // temp as `const __sig = __sig` (TDZ ReferenceError). The __sdt_ prefix avoids it.
+    // Mirrors EFFECT_FIXTURE's scaffold (push + tag + user_effect wrapping $.set) —
+    // a bare snippet without a `.push(` call would fail the transform's quick-bail
+    // check and never reach the instrumenter.
+    const code = `
+import * as $ from "svelte/internal/client";
+
+function Shadow($$anchor, $$props) {
+  $.push($$props, true, Shadow);
+
+  let __sig = $.tag($.state(0), '__sig');
+
+  $.user_effect(() => {
+    $.set(__sig, $.get(__sig) + 1);
+  });
+
+  return $.pop($$exports);
+}
+`.trim();
+    const result = transformSvelteOutput(code, 'Shadow.svelte');
+    expect(result).not.toBeNull();
+    expect(result!.code).toContain('const __sdt_sig = __sig;');
+    expect(result!.code).not.toContain('const __sig = __sig');
+  });
+
   it('omits the component-name argument when template_effect precedes any $.push', () => {
     const result = transformSvelteOutput(TEMPLATE_EFFECT_BEFORE_PUSH_FIXTURE, 'Counter.svelte');
     expect(result).not.toBeNull();
@@ -198,18 +225,18 @@ describe('transformSvelteOutput', () => {
 
   it('instruments $.tag with registerSignal call', () => {
     const result = transformSvelteOutput(COUNTER_FIXTURE, 'Counter.svelte');
-    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "count")');
-    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "doubled")');
+    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__sdt_s, "count")');
+    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__sdt_s, "doubled")');
   });
 
   it('instruments $.set with preMutation and onMutation calls', () => {
     const result = transformSvelteOutput(EFFECT_FIXTURE, 'EffectChain.svelte');
-    // Target is bound to a temp and evaluated once, so pre/onMutation read __sig
-    expect(result!.code).toContain('const __sig = processed;');
-    expect(result!.code).toContain('__svelte_devtools__?.preMutation(__sig)');
-    expect(result!.code).toContain('__svelte_devtools__?.onMutation(__sig)');
+    // Target is bound to a temp and evaluated once, so pre/onMutation read __sdt_sig
+    expect(result!.code).toContain('const __sdt_sig = processed;');
+    expect(result!.code).toContain('__svelte_devtools__?.preMutation(__sdt_sig)');
+    expect(result!.code).toContain('__svelte_devtools__?.onMutation(__sdt_sig)');
     // The value arg is left untouched so inner instrumentation there still applies
-    expect(result!.code).toContain('$.set(__sig, $.get(input) * 10)');
+    expect(result!.code).toContain('$.set(__sdt_sig, $.get(input) * 10)');
   });
 
   it('preserves original code structure', () => {
@@ -219,7 +246,7 @@ describe('transformSvelteOutput', () => {
     expect(result!.code).toContain('$.pop($$exports)');
     // The $.update call is preserved; only the target is rewritten to the temp
     // (evaluated once) — the delta arg is untouched.
-    expect(result!.code).toContain('$.update(__sig, -1)');
+    expect(result!.code).toContain('$.update(__sdt_sig, -1)');
   });
 
   it('generates a sourcemap', () => {
@@ -233,15 +260,15 @@ describe('transformSvelteOutput', () => {
     expect(result).not.toBeNull();
     const code = result!.code;
     // The target is bound to the temp once; pre/onMutation and the rewritten
-    // call all read __sig rather than re-evaluating `obj.x`.
-    expect(code).toContain('const __sig = obj.x;');
-    expect(code).toContain('$.set(__sig, 5)');
+    // call all read __sdt_sig rather than re-evaluating `obj.x`.
+    expect(code).toContain('const __sdt_sig = obj.x;');
+    expect(code).toContain('$.set(__sdt_sig, 5)');
     // `obj.x` must appear ONLY in the temp bindings — never spliced into the
     // hook calls or the call args. This fixture has two targets (set + update),
-    // so exactly two occurrences, both as `const __sig = obj.x;`.
+    // so exactly two occurrences, both as `const __sdt_sig = obj.x;`.
     const targetOccurrences = code.match(/obj\.x/g);
     expect(targetOccurrences?.length).toBe(2);
-    const bindings = code.match(/const __sig = obj\.x;/g);
+    const bindings = code.match(/const __sdt_sig = obj\.x;/g);
     expect(bindings?.length).toBe(2);
   });
 
@@ -249,15 +276,15 @@ describe('transformSvelteOutput', () => {
     const result = transformSvelteOutput(MEMBER_TARGET_FIXTURE, 'MemberTarget.svelte');
     const code = result!.code;
     // $.update target is likewise bound once and reused via the temp.
-    expect(code).toContain('$.update(__sig, -1)');
-    expect(code).toContain('__svelte_devtools__?.preMutation(__sig)');
-    expect(code).toContain('__svelte_devtools__?.onMutation(__sig)');
+    expect(code).toContain('$.update(__sdt_sig, -1)');
+    expect(code).toContain('__svelte_devtools__?.preMutation(__sdt_sig)');
+    expect(code).toContain('__svelte_devtools__?.onMutation(__sdt_sig)');
   });
 
   it('instruments $.tag_proxy with registerSignal call (object/array/map $state)', () => {
     const result = transformSvelteOutput(PROXY_STATE_FIXTURE, 'Profile.svelte');
     expect(result).not.toBeNull();
-    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__s, "user")');
+    expect(result!.code).toContain('__svelte_devtools__?.registerSignal(__sdt_s, "user")');
     // original tag_proxy call preserved inside the IIFE
     expect(result!.code).toContain("$.tag_proxy($.proxy({ name: 'Ada' }), 'user')");
   });
