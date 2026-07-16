@@ -1,9 +1,10 @@
 # svedtools — Svelte 5 DevTools
 
-A **Vite plugin + Chrome extension** for inspecting Svelte 5 internals: the component
-tree, fine-grained reactivity (`$state` / `$derived` / `$effect`), profiling, and update
-tracing. The Vite plugin instruments your app at compile time and injects a runtime
-bridge; the extension renders a DevTools panel that talks to that bridge.
+A **Vite plugin + Chrome extension** for inspecting **and editing** Svelte 5 internals:
+the component tree, fine-grained reactivity (`$state` / `$derived` / `$effect`),
+profiling, update tracing, and jump-to-source. The Vite plugin instruments your app at
+compile time and injects a runtime bridge; the extension renders a DevTools panel that
+talks to that bridge.
 
 📖 **Docs site:** https://jeremn.github.io/svedtools/
 
@@ -110,7 +111,7 @@ tests/           integration + e2e (Playwright)
 
 ## Compatibility
 
-The bridge runtime is verified against Svelte `>=5.0.0 <5.40.0`. A weekly CI matrix
+The bridge runtime is verified against Svelte `>=5.0.0 <6.0.0`. A weekly CI matrix
 ([`.github/workflows/compat.yml`](.github/workflows/compat.yml)) re-tests against several
 Svelte minors every Monday; the single place that touches Svelte internals is
 `Compat.*` in `packages/vite-plugin/src/bridge/compat.ts`.

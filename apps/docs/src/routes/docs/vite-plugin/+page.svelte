@@ -3,27 +3,30 @@
   enabled: true, // Enable instrumentation (default: true in dev)
 })`;
 
-  const pushPopExample = `// Compiled output (simplified)
-function Counter($$anchor) {
-  $.push($$anchor, "Counter", "Counter.svelte");  // <-- injected
+  const pushPopExample = `// Compiled output (simplified) — the DevTools call is injected AROUND
+// Svelte's own call, as a comma expression, not inside the component body:
 
-  let count = $.source(0);
-  // ... component logic ...
-
-  $.pop();  // <-- injected
-}`;
+// $.push($$props, true, Counter)
+(window.__svelte_devtools__?.onPush("Counter", $$props, Counter), $.push($$props, true, Counter));
+// ...component logic...
+// $.pop($$exports)
+(window.__svelte_devtools__?.onPop($), $.pop($$exports));`;
 
   const setUpdateExample = `// Original: count = count + 1
-// Instrumented:
-$.set(count, $.get(count) + 1);
-//  ^-- $.set calls are tracked by DevTools`;
+// Instrumented (simplified — the read half of the expression is compiled
+// output too, but that read call itself is NOT instrumented):
+$.set(count, <current value> + 1);
+//  ^-- only the write is tracked by DevTools`;
 
-  const instrumentedHooks = `// Hooks injected by the Vite plugin:
-$.push(anchor, name, file)   // Component mount start
-$.pop()                       // Component mount end
-$.set(signal, value)          // State write
-$.update(signal)              // State increment/decrement
-$.get(signal)                 // State read (dependency tracking)`;
+  const instrumentedHooks = `// Compiler-emitted calls the Vite plugin wraps — nothing else:
+$.push(props, runes, ComponentFn)   // Component mount start
+$.pop(exports)                       // Component mount end
+$.user_effect(fn)                    // $effect registration + profiling wrap
+$.template_effect(fn)                // Update-cycle timing (not registered)
+$.set(signal, value)                 // State write
+$.update(signal)                     // State increment/decrement
+$.tag(signal, label)                 // Signal naming
+$.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`;
 </script>
 
 <article class="doc">
@@ -80,7 +83,9 @@ $.get(signal)                 // State read (dependency tracking)`;
 
     <h3>Component Boundaries</h3>
     <p>
-      Each component function is wrapped with <code>$.push</code> and <code>$.pop</code> calls that track the component tree:
+      Each component function's existing <code>$.push</code> and <code>$.pop</code> calls track the component tree.
+      <code>$.pop</code> also hands the bridge the compiled module's own internals namespace, which it uses to register unmount
+      tracking and to power state editing:
     </p>
     <pre><code>{pushPopExample}</code></pre>
 
@@ -90,6 +95,12 @@ $.get(signal)                 // State read (dependency tracking)`;
       to the DevTools:
     </p>
     <pre><code>{setUpdateExample}</code></pre>
+
+    <p>
+      Signal <em>naming</em> rides on the compiler emitting <code>$.tag</code>/<code>$.tag_proxy</code>, which early
+      Svelte&nbsp;5 (&le;&nbsp;5.20) doesn't emit &mdash; the component tree and tracing still work on those versions,
+      but signals show up unnamed.
+    </p>
   </section>
 
   <section>
