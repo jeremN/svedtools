@@ -977,32 +977,46 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         // shape validator already enforces signalId: string + path: string[]
         // for panel traffic, but the page wire is reachable without the
         // extension (e2e, other tooling) — re-normalize here.
+        // Reachable from same-origin page scripts BY DESIGN (same trust model
+        // as inspect:component / highlight:component): a same-realm script
+        // can already mutate app state directly, so this write path grants
+        // no capability it doesn't have — and the plugin is dev-only.
         const editMsg = msg as { signalId?: unknown; path?: unknown; value?: unknown };
         if (typeof editMsg.signalId !== 'string') break;
         const path = Array.isArray(editMsg.path) ? editMsg.path.map(String) : [];
         const signal = idToSignal.get(editMsg.signalId);
         const meta = signal ? signalMap.get(signal) : undefined;
         if (!signal || !meta) break;
+        // Source-only contract enforced here for BOTH branches (adversarial
+        // review round): nested edits must not mutate an object-valued
+        // derived's cached value — deriveds often alias source objects, so
+        // such writes would leak into real state. meta.type filters any
+        // future non-state registrations (props); isDerivedSignal
+        // structurally catches tagged deriveds. Compat.setValue re-checks
+        // internally (defense in depth).
+        const editableSource = meta.type === 'state' && !Compat.isDerivedSignal(signal);
         let edited = false;
-        if (path.length === 0) {
-          // Top-level replace — only source signals, through the app's own
-          // $.set. Proxy-registered object state has no top-level setter (the
-          // variable binding isn't ours to reassign) and is refused inside
-          // setValue by the Value-shape check.
-          edited = Compat.setValue(svelteInternals, signal, editMsg.value);
-        } else {
-          // Nested edit — assign through the live value; $state proxies fire
-          // their own reactivity from the set trap. Note edits deliberately
-          // bypass preMutation/onMutation (those wrap the transform's
-          // instrumented $.set call sites), so panel edits produce no
-          // trace:update entries.
-          let live: unknown;
-          try {
-            live = Compat.getValue(signal);
-          } catch {
-            live = undefined;
+        if (editableSource) {
+          if (path.length === 0) {
+            // Top-level replace — only source signals, through the app's own
+            // $.set. Proxy-registered object state has no top-level setter (the
+            // variable binding isn't ours to reassign) and is refused inside
+            // setValue by the Value-shape check.
+            edited = Compat.setValue(svelteInternals, signal, editMsg.value);
+          } else {
+            // Nested edit — assign through the live value; $state proxies fire
+            // their own reactivity from the set trap. Note edits deliberately
+            // bypass preMutation/onMutation (those wrap the transform's
+            // instrumented $.set call sites), so panel edits produce no
+            // trace:update entries.
+            let live: unknown;
+            try {
+              live = Compat.getValue(signal);
+            } catch {
+              live = undefined;
+            }
+            edited = applyEditAtPath(live, path, editMsg.value);
           }
-          edited = applyEditAtPath(live, path, editMsg.value);
         }
         if (edited) markGraphDirty();
         // Always answer with the authoritative snapshot — confirm or revert.
