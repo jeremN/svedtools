@@ -94,6 +94,15 @@ test.describe('State editing', () => {
     expect(after).not.toHaveProperty('error');
     expect(signalByLabel(after, 'doubled').value).toBe(0);
     await expect(page.locator('[data-testid="counter-doubled"]')).toContainText('Doubled: 0');
+
+    // Nested paths on a derived are refused by the same guard (the guard
+    // fires before the path walk — see the state:edit case in bridge/main.ts).
+    const afterNested = await sendAndAwait(
+      page,
+      { type: 'state:edit', signalId: doubled.id, path: ['anything'], value: 99 },
+      'state:snapshot',
+    );
+    expect(signalByLabel(afterNested, 'doubled').value).toBe(0);
   });
 
   test('malformed edits are refused and leave the page functional', async ({ page }) => {

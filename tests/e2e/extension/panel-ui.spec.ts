@@ -153,5 +153,19 @@ test.describe('Panel UI', () => {
 
     // And the panel converges on the authoritative value via its live refresh.
     await expect(countRow).toContainText('42');
+
+    // Non-JSON text into a number field refuses the commit (no silent type
+    // flip) and leaves the editor usable for a follow-up edit.
+    await countRow.locator('button.vt-editable').first().dblclick();
+    const editor2 = countRow.locator('input.vt-editor');
+    await editor2.fill('abc');
+    await editor2.press('Enter');
+    await expect(countRow.locator('input.vt-editor')).toHaveCount(0);
+    await countRow.locator('button.vt-editable').first().dblclick();
+    const editor3 = countRow.locator('input.vt-editor');
+    await editor3.fill('43');
+    await editor3.press('Enter');
+    await expect(appPage.locator('[data-testid="counter-value"]')).toHaveText('43');
+    await expect(countRow).toContainText('43');
   });
 });
