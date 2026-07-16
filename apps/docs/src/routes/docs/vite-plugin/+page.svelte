@@ -118,6 +118,45 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
       keeping the overhead minimal.
     </p>
   </section>
+
+  <section>
+    <h2>Security: dev-server WebSocket</h2>
+    <p>
+      Jump-to-source and the panel's source viewer reach the Vite dev server over its WebSocket channel &mdash; the
+      <code>open-in-editor</code> and <code>get-source</code> handlers the plugin registers. Both are clamped to files
+      inside your project root, and <code>get-source</code> further restricts reads to recognized source extensions.
+    </p>
+    <p>
+      The threat these handlers are hardened against is a malicious website you visit while the dev server is running
+      (cross-site WebSocket hijacking). Vite closes that path: since the fix for
+      <a href="https://github.com/advisories/GHSA-vg6x-rcgg-rjx6">CVE-2025-24010</a>, it rejects any WebSocket upgrade
+      that carries an <code>Origin</code> header without the per-server token it embeds in the client it serves to your
+      dev origin. Browser WebSocket handshakes always send <code>Origin</code>, so a cross-origin site cannot connect.
+      That is why the plugin requires <strong>Vite 5.4.12 / 6.0.9 or newer</strong> (7.x and 8.x already include the
+      fix), enforced by its <code>peerDependencies</code>.
+    </p>
+    <p>That guarantee is specifically about browser origins. It does <em>not</em> cover:</p>
+    <ul>
+      <li>
+        <strong>Non-browser clients</strong> (for example another local process) that omit the <code>Origin</code>
+        header: Vite lets these connect without the token. On a localhost-only dev server this already requires code running
+        on your machine, but if you expose the server to the network (<code>vite --host</code>) a peer on your LAN can
+        reach <code>open-in-editor</code> and <code>get-source</code>. A reachable dev server already serves your source
+        modules over HTTP, so <code>get-source</code> adds little there; <code>open-in-editor</code>, which launches
+        your editor, is the capability to keep in mind.
+      </li>
+      <li>
+        <strong>Unsafe server config:</strong> <code>server.allowedHosts: true</code> or DNS-rebinding setups can let
+        another site recover the token, and <code>legacy.skipWebSocketTokenCheck: true</code> disables the check outright.
+        Do not set either while the DevTools plugin is enabled.
+      </li>
+      <li>
+        <strong>Same-origin script execution</strong> (such as an XSS in your own app) is already inside the trust boundary
+        &mdash; it can reach anything the page can.
+      </li>
+    </ul>
+    <p>For DevTools use, keep the dev server bound to <code>localhost</code>.</p>
+  </section>
 </article>
 
 <style>

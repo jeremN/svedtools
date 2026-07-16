@@ -56,6 +56,10 @@ export default defineConfig({
     <pre><code>{viteConfig}</code></pre>
     <p>You can pass options to control the plugin behavior:</p>
     <pre><code>{viteConfigWithOptions}</code></pre>
+    <p class="note">
+      Requires <strong>Vite 5.4.12 / 6.0.9 or newer</strong> (7.x and 8.x included). The DevTools dev-server WebSocket relies
+      on the origin/token authentication Vite added in those releases.
+    </p>
   </section>
 
   <section>
