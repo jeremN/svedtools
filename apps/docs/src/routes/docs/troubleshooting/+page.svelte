@@ -32,6 +32,15 @@
   </section>
 
   <section>
+    <h2>The version shows just &ldquo;5&rdquo;</h2>
+    <p>
+      By design. The bridge reads the version Svelte discloses to the page, and Svelte&nbsp;5 publishes only its major
+      version (<code>PUBLIC_VERSION = '5'</code> in <code>svelte/src/version.js</code>) &mdash; the full semver is never
+      available to the bridge, so <code>Svelte 5</code> is the expected display, not a detection failure.
+    </p>
+  </section>
+
+  <section>
     <h2>Signals show as &ldquo;unnamed&rdquo;</h2>
     <p>
       Signal naming relies on the compiler emitting Svelte's <code>$.tag</code> dev helper, which early Svelte 5 (&le;&nbsp;5.20)

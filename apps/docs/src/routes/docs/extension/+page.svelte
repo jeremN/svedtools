@@ -89,6 +89,11 @@
             component needs no <code>$effect</code> to appear here.
           </li>
           <li><strong>Effects</strong> — user <code>$effect</code> runs, attributed to their owning component.</li>
+          <li>
+            Components already mounted when you press Record still show up in <strong>Updates</strong> and
+            <strong>Effects</strong> (timing is gated at call time, not at mount) &mdash; only the
+            <strong>Components</strong> table requires a mount during the recording.
+          </li>
           <li>Rows heat-tint red above 16&nbsp;ms, orange above 8&nbsp;ms.</li>
           <li>
             While recording, timings are also emitted to Chrome's Performance panel as custom tracks (under a "Svelte
@@ -168,8 +173,9 @@
         runtime yet.
       </li>
       <li>
-        <strong>Svelte {'{version}'}</strong> (solid flame dot) &mdash; the detected version, read verbatim from
-        Svelte's own disclose-version helper (e.g. <code>Svelte 5.56.4</code>).
+        <strong>Svelte {'{version}'}</strong> (solid flame dot) &mdash; the version Svelte itself discloses. Svelte 5
+        publishes only its <em>major</em> version (<code>PUBLIC_VERSION = '5'</code>), so expect <code>Svelte 5</code>,
+        not a full semver &mdash; that's all the bridge can see.
       </li>
     </ul>
     <p>
