@@ -16,7 +16,8 @@ import {
   getEffectStats,
   resetProfilerState,
 } from './profiler.svelte.js';
-import type { RenderTiming } from '@svelte-devtools/shared';
+import { processMessage, resetState } from './components.svelte.js';
+import type { RenderTiming, ComponentNode } from '@svelte-devtools/shared';
 
 function renderTiming(overrides: Partial<RenderTiming> = {}): RenderTiming {
   return {
@@ -30,15 +31,46 @@ function renderTiming(overrides: Partial<RenderTiming> = {}): RenderTiming {
 }
 
 function effectTiming(
-  overrides: Partial<{ effectId: string; label: string | null; duration: number; depsCount: number }> = {},
+  overrides: Partial<{
+    effectId: string;
+    label: string | null;
+    componentId: string | null;
+    componentName: string | null;
+    duration: number;
+    depsCount: number;
+  }> = {},
 ) {
-  return { effectId: 'e1', label: 'log', duration: 1, depsCount: 1, ...overrides };
+  return {
+    effectId: 'e1',
+    label: 'log',
+    componentId: null,
+    componentName: null,
+    duration: 1,
+    depsCount: 1,
+    ...overrides,
+  };
+}
+
+function componentNode(overrides: Partial<ComponentNode> = {}): ComponentNode {
+  return {
+    id: 'c1',
+    name: 'Counter',
+    filename: 'Counter.svelte',
+    children: [],
+    parentId: null,
+    meta: null,
+    stateIds: [],
+    effectIds: [],
+    renderDuration: null,
+    ...overrides,
+  };
 }
 
 describe('profiler store', () => {
   beforeEach(() => {
     sendMock.mockClear();
     resetProfilerState();
+    resetState();
   });
 
   describe('startRecording / stopRecording / clearData', () => {
@@ -109,7 +141,66 @@ describe('profiler store', () => {
       expect(componentStats.map((s) => s.name)).toEqual(['TodoList', 'Counter']);
 
       const effectStats = getEffectStats();
-      expect(effectStats).toEqual([{ effectId: 'e1', label: 'log', execCount: 2, totalDuration: 4, avgDuration: 2 }]);
+      expect(effectStats).toEqual([
+        {
+          effectId: 'e1',
+          label: 'log',
+          componentId: null,
+          componentName: null,
+          execCount: 2,
+          totalDuration: 4,
+          avgDuration: 2,
+        },
+      ]);
+    });
+
+    it('carries componentId/componentName through and backfills a null-then-set sequence', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [
+          effectTiming({ effectId: 'e1', label: 'log', componentId: null, componentName: null, duration: 1 }),
+          effectTiming({ effectId: 'e1', label: 'log', componentId: 'c1', componentName: 'Counter', duration: 2 }),
+        ],
+      });
+
+      const effectStats = getEffectStats();
+      expect(effectStats).toEqual([
+        {
+          effectId: 'e1',
+          label: 'log',
+          componentId: 'c1',
+          componentName: 'Counter',
+          execCount: 2,
+          totalDuration: 3,
+          avgDuration: 1.5,
+        },
+      ]);
+    });
+
+    it('attribution is frozen at record time — component-map churn cannot rewrite it', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [
+          effectTiming({ effectId: 'e1', label: null, componentId: 'sdt-1', componentName: 'EffectChain' }),
+        ],
+      });
+      expect(getEffectStats()[0].componentName).toBe('EffectChain');
+
+      // Page reload scenario: the bridge's id counter restarts and a DIFFERENT
+      // component inherits the recycled id 'sdt-1' in the live component map.
+      processMessage({
+        type: 'component:tree',
+        nodes: [componentNode({ id: 'sdt-1', name: 'Impostor' })],
+      });
+
+      // The recorded stats must keep the name frozen at record time.
+      expect(getEffectStats()[0].componentName).toBe('EffectChain');
     });
 
     it('isRecording is set to false once data lands', () => {

@@ -83,5 +83,12 @@ test.describe('Profiler', () => {
     const data = await page.evaluate(() => window.__svelte_devtools__!.stopProfiling());
 
     expect(data.effectTimings.length).toBeGreaterThan(0);
+
+    const ecId = await page.evaluate(() => {
+      const tree = (window.__svelte_devtools__?.getTree() ?? []) as Array<{ id: string; name: string }>;
+      return tree.find((n) => n.name === 'EffectChain')?.id ?? null;
+    });
+    expect(ecId).not.toBeNull();
+    expect(data.effectTimings.some((t: any) => t.componentId === ecId && t.componentName === 'EffectChain')).toBe(true);
   });
 });

@@ -119,6 +119,7 @@
       <table>
         <thead>
           <tr>
+            <th>Component</th>
             <th>Effect</th>
             <th>Executions</th>
             <th>Total</th>
@@ -128,6 +129,7 @@
         <tbody>
           {#each effectStats as stat (stat.effectId)}
             <tr>
+              <td class="cell-name">{stat.componentName ?? '—'}</td>
               <td class="cell-name">
                 {#if stat.label}
                   {stat.label}
