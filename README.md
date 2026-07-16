@@ -1,6 +1,6 @@
 # svedtools — Svelte 5 DevTools
 
-A **Vite plugin + Chrome extension** for inspecting **and editing** Svelte 5 internals:
+A **Vite plugin + Chrome extension** for inspecting and editing Svelte 5 internals:
 the component tree, fine-grained reactivity (`$state` / `$derived` / `$effect`),
 profiling, update tracing, and jump-to-source. The Vite plugin instruments your app at
 compile time and injects a runtime bridge; the extension renders a DevTools panel that
@@ -102,7 +102,7 @@ tests/           integration + e2e (Playwright)
 ## Gotchas
 
 - **The panel won't activate on the deployed docs site.** https://jeremn.github.io/svedtools/
-  is a static production build. The Vite plugin is `apply: 'serve'` (dev-only by design), so
+  is a static production build. The Vite plugin is `apply: 'serve'` (intentionally dev-only), so
   the bridge is never injected into the shipped HTML — the panel will sit on "Waiting for
   Svelte…" forever. Run a dev server (`pnpm dev` or `pnpm dev:docs`) to see it work.
 - **pnpm blocking install build scripts.** If pnpm refuses to run a dependency's build

@@ -23,9 +23,9 @@ export default defineConfig({
 });`;
 
   const viteConfigWithOptions = `svelteDevtools({
-  enabled: true, // default: true — set false to disable instrumentation entirely
-  // Regardless of this flag, the plugin only ever applies to the dev server
-  // (apply: 'serve'); it never runs on a production/static build.
+  enabled: true, // default: true; set false to disable instrumentation
+  // Regardless of the flag, the plugin only applies to the dev server
+  // (apply: 'serve'); it never runs on a production or static build.
 })`;
 </script>
 
@@ -36,8 +36,8 @@ export default defineConfig({
   <section>
     <h2>1. Install from source</h2>
     <p class="note">
-      This is a private, coworker-testing project. It is <strong>not</strong> published to npm and
-      <strong>not</strong> on the Chrome Web Store &mdash; you install it from a clone of the repo.
+      This is a private, coworker-testing project. It isn't published to npm or the Chrome Web Store; you install it
+      from a clone of the repo.
     </p>
     <pre><code>{cloneCmd}</code></pre>
     <p>
@@ -50,7 +50,7 @@ export default defineConfig({
   <section>
     <h2>2. Configure Vite</h2>
     <p>
-      Add <code>svelteDevtools()</code> to your Vite config, <strong>after</strong> the
+      Add <code>svelteDevtools()</code> to your Vite config, after the
       <code>svelte()</code> plugin:
     </p>
     <pre><code>{viteConfig}</code></pre>

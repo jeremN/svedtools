@@ -82,7 +82,7 @@
         <ul>
           <li>
             <strong>Components</strong> — mount timings only: components that mounted while recording, with count/total/avg/max.
-            It does not track re-renders.
+            It doesn't track re-renders.
           </li>
           <li>
             <strong>Updates</strong> — per-component update-cycle timings. This is where re-render cost shows up; a
@@ -91,13 +91,14 @@
           <li><strong>Effects</strong> — user <code>$effect</code> runs, attributed to their owning component.</li>
           <li>
             Components already mounted when you press Record still show up in <strong>Updates</strong> and
-            <strong>Effects</strong> (timing is gated at call time, not at mount) &mdash; only the
+            <strong>Effects</strong>, since timing is gated when each effect runs. Only the
             <strong>Components</strong> table requires a mount during the recording.
           </li>
           <li>Rows heat-tint red above 16&nbsp;ms, orange above 8&nbsp;ms.</li>
           <li>
-            While recording, timings are also emitted to Chrome's Performance panel as custom tracks (under a "Svelte
-            DevTools Pro" group) via <code>console.timeStamp</code>.
+            While recording, mount and effect timings also land in Chrome's Performance panel as custom tracks (grouped
+            under "Svelte DevTools Pro") via <code>console.timeStamp</code>. Update timings appear only in the Updates
+            table here.
           </li>
         </ul>
       </div>
@@ -111,8 +112,9 @@
           </li>
           <li>
             Each trace shows a root cause (signal, old &rarr; new value, owning component, an expandable stack trace), a
-            propagation chain through deriveds and effects (capped at 50 steps), and a summary of the resulting DOM
-            mutations.
+            propagation chain through deriveds and effects (capped at 50 steps), and the DOM mutations observed around
+            that update. The mutation list is best-effort: a page-wide observer collects it, so nearby unrelated
+            mutations can appear and later async work can be missed.
           </li>
           <li>Selecting a trace opens its detail pane; Clear empties the list.</li>
         </ul>
@@ -122,10 +124,10 @@
     <h3>State inspector</h3>
     <p>
       The right pane of the Components tab shows the selected component's reactive state. Each row is badged
-      <code>$state</code>, <code>$derived</code>, or <code>$props</code> &mdash; the <code>$derived</code> badge is a structural
-      classification made at snapshot time, based on what the runtime itself considers a derived, not a guess from naming.
-      Objects and arrays drill down lazily, fetching one level of children per expansion. While the selected component keeps
-      updating, the snapshot live-refreshes (debounced) so the panel tracks the app.
+      <code>$state</code> or <code>$derived</code>; the <code>$derived</code> badge comes from a structural check at snapshot
+      time, based on what the runtime itself considers a derived. Component props aren't listed: the inspector shows runes-tagged
+      signals only. Objects and arrays drill down lazily, fetching one level of children per expansion. While the selected
+      component keeps updating, the snapshot live-refreshes (debounced) so the panel tracks the app.
     </p>
 
     <h3>Editing state</h3>
@@ -136,8 +138,8 @@
     </p>
     <ul>
       <li>
-        Editable types are strings, numbers, booleans, and <code>null</code> &mdash; both top-level values and values nested
-        at any drilled-down path.
+        Editable types are strings, numbers, booleans, and <code>null</code>, at the top level or nested at any
+        drilled-down path.
       </li>
       <li>
         The input is prefilled with the JSON form of the current value (strings show their quotes). On commit the text
@@ -147,18 +149,18 @@
         type. You can still change a value's type deliberately by typing valid JSON of the new type.
       </li>
       <li>
-        Top-level edits go through Svelte's own <code>set()</code> &mdash; equality checks and reaction scheduling are
+        Top-level edits go through Svelte's own <code>set()</code>, so equality checks and reaction scheduling are
         Svelte's; nested edits assign directly through the live <code>$state</code> proxy. Either way the app updates through
-        real reactivity, exactly as if the code itself had made the assignment: deriveds recompute and the DOM updates.
+        real reactivity: deriveds recompute and the DOM updates, the same as an assignment in the code.
       </li>
       <li>
-        Edits are refused, and the field visibly reverts, for: <code>$derived</code> and <code>$props</code> rows,
+        Edits are refused, and the field visibly reverts, for: <code>$derived</code> rows,
         <code>Map</code>/<code>Set</code> contents, keys that don't exist, out-of-bounds array indices, and strings the inspector
         shows truncated (longer than 200 characters).
       </li>
       <li>
-        Panel-initiated edits do <strong>not</strong> appear in the Tracer &mdash; they bypass the compile-time write instrumentation
-        entirely, by design.
+        Panel-initiated edits don't show up in the Tracer: they bypass the compile-time write instrumentation, so
+        there's no write event to record.
       </li>
     </ul>
   </section>
@@ -174,13 +176,13 @@
       </li>
       <li>
         <strong>Svelte {'{version}'}</strong> (solid flame dot) &mdash; the version Svelte itself discloses. Svelte 5
-        publishes only its <em>major</em> version (<code>PUBLIC_VERSION = '5'</code>), so expect <code>Svelte 5</code>,
-        not a full semver &mdash; that's all the bridge can see.
+        publishes only its <em>major</em> version (<code>PUBLIC_VERSION = '5'</code>), so the status bar reads
+        <code>Svelte 5</code> rather than a full semver; that's all the bridge can see.
       </li>
     </ul>
     <p>
       An untested-version banner appears when the detected major version falls outside the range this bridge is verified
-      against &mdash; see <a href={resolve('/docs/vite-plugin')}>Vite Plugin</a> for the current range.
+      against. See <a href={resolve('/docs/vite-plugin')}>Vite Plugin</a> for the current range.
     </p>
   </section>
 

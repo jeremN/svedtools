@@ -27,8 +27,8 @@ export default defineConfig({
   <header class="hero">
     <h1>Svelte&nbsp;5 DevTools</h1>
     <p class="tagline">
-      Inspect &mdash; and edit &mdash; Svelte 5 internals (the component tree, fine-grained reactivity, profiling, and
-      update tracing) right inside Chrome DevTools.
+      Inspect and edit Svelte 5 internals (the component tree, fine-grained reactivity, profiling, and update tracing)
+      right inside Chrome DevTools.
     </p>
     <div class="cta">
       <a href={resolve('/docs/installation')} class="btn btn-primary">Get started</a>

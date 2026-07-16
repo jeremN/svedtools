@@ -3,8 +3,8 @@
   enabled: true, // Enable instrumentation (default: true in dev)
 })`;
 
-  const pushPopExample = `// Compiled output (simplified) — the DevTools call is injected AROUND
-// Svelte's own call, as a comma expression, not inside the component body:
+  const pushPopExample = `// Compiled output (simplified): the DevTools call is injected around
+// Svelte's own call, as a comma expression.
 
 // $.push($$props, true, Counter)
 (window.__svelte_devtools__?.onPush("Counter", $$props, Counter), $.push($$props, true, Counter));
@@ -13,8 +13,8 @@
 (window.__svelte_devtools__?.onPop($), $.pop($$exports));`;
 
   const setUpdateExample = `// Original: count = count + 1
-// Instrumented (simplified — the read half of the expression is compiled
-// output too, but that read call itself is NOT instrumented):
+// Instrumented (simplified; the read half of the expression is compiled
+// output too, but that read call isn't instrumented):
 $.set(count, <current value> + 1);
 //  ^-- only the write is tracked by DevTools`;
 
@@ -65,11 +65,12 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
       The plugin operates as a Vite transform. After the Svelte compiler produces JavaScript output, the plugin parses
       the AST and injects DevTools hooks around key operations.
     </p>
-    <p>This is a <strong>compile-time</strong> approach, meaning:</p>
+    <p>This is a compile-time approach, meaning:</p>
     <ul>
       <li>
-        Near-zero runtime overhead when idle — a single boolean check per instrumented effect run; timing work only
-        happens while the profiler records.
+        Low overhead when idle: instrumented effects check a flag per run, and each instrumented state write passes
+        through a pair of small hooks that return immediately when no panel is connected. Timing work only happens while
+        the profiler records.
       </li>
       <li>No monkey-patching or runtime proxies needed.</li>
       <li>Precise source mapping back to original <code>.svelte</code> files.</li>
@@ -98,8 +99,8 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
 
     <p>
       Signal <em>naming</em> rides on the compiler emitting <code>$.tag</code>/<code>$.tag_proxy</code>, which early
-      Svelte&nbsp;5 (&le;&nbsp;5.20) doesn't emit &mdash; the component tree and tracing still work on those versions,
-      but signals show up unnamed.
+      Svelte&nbsp;5 (&le;&nbsp;5.20) doesn't emit. The component tree and tracing still work on those versions, but
+      signals show up unnamed.
     </p>
   </section>
 
@@ -113,8 +114,8 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
     </ul>
     <p>
       The bridge always initializes in dev (component tree registration is effectively free), but the per-write tracing
-      work &mdash; stack capture, value serialization, and trace messaging &mdash; only runs while a DevTools panel is
-      connected, keeping the overhead minimal.
+      work of stack capture, value serialization, and trace messaging only runs while a DevTools panel is connected,
+      keeping the overhead minimal.
     </p>
   </section>
 </article>
