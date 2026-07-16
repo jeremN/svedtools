@@ -84,6 +84,15 @@ describe('isDevToolsMessage', () => {
     ).toBe(false);
   });
 
+  it('returns true for picker:picked', () => {
+    expect(
+      isDevToolsMessage({
+        source: 'svelte-devtools-pro',
+        payload: { type: 'picker:picked', componentId: null },
+      }),
+    ).toBe(true);
+  });
+
   it('validates all bridge-to-panel message types', () => {
     const bridgeTypes = [
       'component:mounted',
@@ -97,6 +106,7 @@ describe('isDevToolsMessage', () => {
       'profiler:data',
       'trace:update',
       'bridge:ready',
+      'picker:picked',
     ];
     for (const type of bridgeTypes) {
       expect(
@@ -123,6 +133,8 @@ describe('isDevToolsMessage', () => {
       'tree:request',
       'devtools:panel-connected',
       'devtools:panel-disconnected',
+      'picker:start',
+      'picker:stop',
     ];
     for (const type of panelTypes) {
       expect(

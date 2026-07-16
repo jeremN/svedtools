@@ -47,6 +47,11 @@
           </li>
           <li>Hovering a row draws a highlight overlay over that component's DOM on the inspected page.</li>
           <li>
+            The crosshair button picks an element from the page: click it, then click any element on the page to select
+            its owning component. Escape or clicking the button again cancels. Matching is file-based, so it can't tell
+            apart two instances of the same component.
+          </li>
+          <li>
             Each row shows the file basename and a <strong>&#8599;</strong> button that opens the source file in your editor.
           </li>
           <li>Render duration is colored per row: red above 16&nbsp;ms, orange above 8&nbsp;ms.</li>

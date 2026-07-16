@@ -6,6 +6,7 @@ let componentMap: Record<NodeId, ComponentNode> = $state({});
 let rootIds: NodeId[] = $state([]);
 let selectedId: NodeId | null = $state(null);
 let searchFilter: string = $state('');
+let pickerActive: boolean = $state(false);
 let stateSnapshot: Array<{
   id: NodeId;
   label: string | null;
@@ -33,6 +34,14 @@ export function getSearchFilter(): string {
 
 export function setSearchFilter(value: string): void {
   searchFilter = value;
+}
+
+export function getPickerActive(): boolean {
+  return pickerActive;
+}
+
+export function setPickerActive(value: boolean): void {
+  pickerActive = value;
 }
 
 export function selectComponent(id: NodeId | null): void {
@@ -134,6 +143,22 @@ export function processMessage(message: BridgeToPanelMessage): void {
       }
       break;
     }
+
+    case 'picker:picked': {
+      if (message.componentId !== null && message.componentId in componentMap) {
+        selectedId = message.componentId;
+      }
+      pickerActive = false;
+      break;
+    }
+
+    case 'bridge:ready': {
+      // A fresh bridge means any in-flight pick died with the old page
+      // (reload or navigation) — the optimistic pickerActive flag would
+      // otherwise stick, since no picker:picked will ever arrive for it.
+      pickerActive = false;
+      break;
+    }
   }
 }
 
@@ -156,4 +181,5 @@ export function resetState(): void {
   selectedId = null;
   searchFilter = '';
   stateSnapshot = null;
+  pickerActive = false;
 }

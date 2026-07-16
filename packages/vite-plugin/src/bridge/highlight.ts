@@ -4,6 +4,8 @@
  * tree hover-to-highlight feature.
  */
 
+import { getSvelteMetaFile } from './svelte-meta.js';
+
 const HIGHLIGHT_CACHE_TTL = 500; // ms
 const MAX_ELEMENTS = 10000;
 
@@ -44,9 +46,10 @@ export function showHighlight(rects: DOMRect[] | null): void {
 }
 
 /**
- * Walks the DOM looking for elements whose `__svelte_meta.file` matches
- * the given filename. Results are cached briefly because hover events
- * fire fast and full-DOM walks aren't cheap.
+ * Walks the DOM looking for elements whose `__svelte_meta` filename (read
+ * shape-tolerantly via getSvelteMetaFile — see svelte-meta.ts) matches the
+ * given filename. Results are cached briefly because hover events fire fast
+ * and full-DOM walks aren't cheap.
  */
 export function findDomElementsByFilename(componentId: string, filename: string | null): Element[] {
   if (!filename) return [];
@@ -60,9 +63,9 @@ export function findDomElementsByFilename(componentId: string, filename: string 
   let count = 0;
   while ((el = walker.nextNode()) && count < MAX_ELEMENTS) {
     count++;
-    const meta = (el as Element).__svelte_meta;
-    if (!meta || !meta.file) continue;
-    if (meta.file === filename || meta.file.endsWith('/' + filename)) {
+    const file = getSvelteMetaFile(el as Element);
+    if (!file) continue;
+    if (file === filename || file.endsWith('/' + filename)) {
       elements.push(el as Element);
     }
   }

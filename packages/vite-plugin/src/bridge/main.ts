@@ -17,6 +17,8 @@ import { Compat, detectSvelteVersion } from './compat.js';
 import { safeSerialize, summarizeDomMutation, serializeChildrenAtPath } from './serializer.js';
 import { showHighlight, findDomElementsByFilename } from './highlight.js';
 import { applyEditAtPath } from './state-editor.js';
+import { startPicker, stopPicker } from './picker.js';
+import { getSvelteMetaFile } from './svelte-meta.js';
 import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types.js';
 
 (function () {
@@ -905,6 +907,9 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         tracePending.length = 0;
         traceDomMutations.length = 0;
         stopGraphSubscription();
+        // A closed panel can't finish an in-flight pick — never leave the
+        // page in picking mode (crosshair cursor, capture-phase listeners).
+        stopPicker();
         break;
       case 'profiler:start':
         bridge.startProfiling();
@@ -962,6 +967,30 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         }
         break;
       }
+      case 'picker:start': {
+        startPicker((el) => {
+          let componentId: string | null = null;
+          const metaFile = el ? getSvelteMetaFile(el) : null;
+          if (metaFile) {
+            // First matching componentMap entry in insertion order — same
+            // coarseness as highlight.ts's reverse mapping (filename-level,
+            // can't distinguish two instances of the same component).
+            for (const [id, node] of componentMap) {
+              if (node.filename && (metaFile === node.filename || metaFile.endsWith('/' + node.filename))) {
+                componentId = id;
+                break;
+              }
+            }
+          }
+          emit({ type: 'picker:picked', componentId });
+          // One pick per activation.
+          stopPicker();
+        });
+        break;
+      }
+      case 'picker:stop':
+        stopPicker();
+        break;
       case 'state:expand': {
         const expandMsg = msg as { rootId: string; path: (string | number)[] };
         const rootId = expandMsg.rootId;

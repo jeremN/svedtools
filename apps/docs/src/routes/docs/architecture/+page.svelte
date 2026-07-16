@@ -26,13 +26,13 @@
 'component:mounted' | 'component:unmounted' | 'component:updated'
 | 'component:tree' | 'state:snapshot' | 'state:expanded'
 | 'graph:snapshot' | 'graph:update' | 'profiler:data'
-| 'trace:update' | 'bridge:ready'
+| 'trace:update' | 'bridge:ready' | 'picker:picked'
 
 // Panel -> bridge
 'inspect:component' | 'state:edit' | 'state:expand'
 | 'profiler:start' | 'profiler:stop' | 'graph:request'
 | 'graph:subscribe' | 'graph:unsubscribe' | 'highlight:component'
-| 'open-in-editor' | 'tree:request'
+| 'open-in-editor' | 'tree:request' | 'picker:start' | 'picker:stop'
 
 // Service worker -> bridge (lifecycle gates)
 | 'devtools:panel-connected' | 'devtools:panel-disconnected'`;

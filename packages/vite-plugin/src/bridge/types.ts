@@ -45,7 +45,15 @@ declare global {
     __svelte?: { v?: Set<string>; uid?: number; h?: unknown };
   }
   interface Element {
-    __svelte_meta?: { file?: string; line?: number; column?: number };
+    // Source of truth: svelte/src/internal/client/dev/elements.js `assign_location`
+    // nests the location under `loc`; the flat fields are tolerated for older emissions.
+    __svelte_meta?: {
+      parent?: unknown;
+      loc?: { file?: string; line?: number; column?: number };
+      file?: string;
+      line?: number;
+      column?: number;
+    };
   }
 }
 
