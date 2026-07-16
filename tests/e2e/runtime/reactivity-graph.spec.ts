@@ -67,6 +67,7 @@ test.describe('Reactivity Graph', () => {
     // F19 guard: the permanent profiling wrapper must not leak into labels
     const labels = graph.nodes.map((n: any) => n.label);
     expect(labels).not.toContain('wrappedEffect');
+    expect(labels).not.toContain('wrappedRenderEffect');
   });
 
   test('graph:snapshot message is emitted when graph:request is sent', async ({ page }) => {

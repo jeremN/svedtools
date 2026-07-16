@@ -6,6 +6,6 @@ interface Window {
     signalMap: Map<any, any>;
     effectMap: Map<string, any>;
     startProfiling(): void;
-    stopProfiling(): { timings: any[]; effectTimings: any[] };
+    stopProfiling(): { timings: any[]; effectTimings: any[]; updateTimings: any[] };
   };
 }

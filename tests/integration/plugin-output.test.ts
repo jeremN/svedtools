@@ -82,6 +82,29 @@ describe('plugin output verification', () => {
     expect(code).toContain('registerEffect');
   });
 
+  // $.template_effect is the compiler's update workhorse — it fires whenever a
+  // component's own reactive template bindings change, independent of any user
+  // $effect. Not every Svelte 5 minor emits it under this name (older/newer
+  // compiler internals could shift), so detect the capability from the output
+  // and skip rather than fail, mirroring the $.tag guard above.
+  it('instruments $.template_effect with wrapRenderEffect, and NOT registerEffect (basic-counter has no user $effect)', async (ctx) => {
+    const code = await getTransformed('basic-counter.svelte');
+    if (!code.includes('$.template_effect(')) ctx.skip();
+    // Method-level optional call with the lexical component name baked in.
+    const wrapMatch = code.match(/wrapRenderEffect\?\.\(__sdt_fn, ("[\w$]+")\)/);
+    expect(wrapMatch).not.toBeNull();
+    // The baked name must be the SAME string instrumentPush bakes into onPush —
+    // onPush's name is what becomes ComponentNode.name on the bridge, so this
+    // equality is what guarantees update timings and the component tree agree
+    // (e.g. `basic-counter.svelte` compiles to fn `Basic_counter` in both).
+    const pushMatch = code.match(/onPush\(("[\w$]+"),/);
+    expect(pushMatch).not.toBeNull();
+    expect(wrapMatch![1]).toBe(pushMatch![1]);
+    // basic-counter.svelte declares no $effect, so any registerEffect call in
+    // this output would prove template effects are wrongly being registered.
+    expect(code).not.toContain('registerEffect');
+  });
+
   it('instruments $.set with preMutation/onMutation', async () => {
     const code = await getTransformed('effect-component.svelte');
     expect(code).toContain('preMutation');

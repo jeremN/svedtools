@@ -63,6 +63,10 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   const stableReactionIds = new WeakMap<Reaction, string>();
   const idToSignal = new Map<string, Value>();
   const idToReaction = new Map<string, WeakRef<Reaction>>();
+  // Template-effect wrappers (wrapRenderEffect) — tracked so graph/tracer
+  // label fallbacks never display the instrumentation wrapper's own fn name
+  // ('wrappedRenderEffect') for reactions that are absent from effectMap.
+  const renderEffectWrappers = new WeakSet<(...args: unknown[]) => unknown>();
 
   // -- Profiling --
   const MAX_PROFILING_ENTRIES = 10000;
@@ -81,6 +85,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     componentName: string | null;
     duration: number;
     depsCount: number;
+  }> = [];
+  const updateTimings: Array<{
+    componentId: string | null;
+    componentName: string | null;
+    duration: number;
   }> = [];
 
   // -- Tracing --
@@ -212,7 +221,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     getTree: () => unknown[];
     buildGraph: (filterComponentId: string | null) => { nodes: unknown[]; edges: unknown[] };
     startProfiling: () => void;
-    stopProfiling: () => { timings: unknown[]; effectTimings: unknown[] };
+    stopProfiling: () => { timings: unknown[]; effectTimings: unknown[]; updateTimings: unknown[] };
   } = {
     version: '0.0.1',
     componentMap,
@@ -475,6 +484,32 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       return wrapped;
     },
 
+    wrapRenderEffect(fn, componentName) {
+      // Timing-only wrapper for compiler-emitted template effects. Unlike
+      // user effects these are NEVER registered into effectMap/the graph:
+      // {#each} bodies create one per row, so registry entries would grow
+      // with list size. Owner is captured at wrap time — the transform bakes
+      // the lexical component fn name in as `componentName`, which is correct
+      // for rows created at ANY time (post-mount {#each} rows run with an
+      // empty bridge component stack); the push/pop-window map lookup is only
+      // a fallback. The name is frozen immediately either way (never resolve
+      // history through live state).
+      const ownerId = currentComponentId();
+      const ownerName = componentName ?? (ownerId ? (componentMap.get(ownerId)?.name ?? null) : null);
+      const wrapped = function wrappedRenderEffect(this: unknown, ...args: unknown[]) {
+        // Call-time gate: the wrapper is permanent; only timing is conditional.
+        if (!profilingActive) return fn.apply(this, args);
+        const start = performance.now();
+        const result = fn.apply(this, args);
+        const duration = performance.now() - start;
+        if (updateTimings.length >= MAX_PROFILING_ENTRIES) updateTimings.shift();
+        updateTimings.push({ componentId: ownerId, componentName: ownerName, duration });
+        return result;
+      };
+      renderEffectWrappers.add(wrapped);
+      return wrapped;
+    },
+
     getTree() {
       const nodes: unknown[] = [];
       for (const [, node] of componentMap) {
@@ -537,7 +572,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
             }
             // Matched effects must never fall back to fn.name — fn is now always the
             // permanent profiling wrapper (named 'wrappedEffect'), not user code.
-            const reactionLabel = Compat.getLabel(reaction) || (effMeta ? effMeta.label : fn?.name) || null;
+            // Same for unmatched template-effect reactions: they are deliberately
+            // absent from effectMap, so gate the fn?.name fallback on the wrapper
+            // registry lest they display 'wrappedRenderEffect'.
+            const fallbackName = effMeta ? effMeta.label : fn && renderEffectWrappers.has(fn) ? null : fn?.name;
+            const reactionLabel = Compat.getLabel(reaction) || fallbackName || null;
             let reactionValue: unknown = null;
             let reactionDirty = false;
             if (isDerived) {
@@ -589,6 +628,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       profilingActive = true;
       renderTimings.length = 0;
       effectTimings.length = 0;
+      updateTimings.length = 0;
     },
 
     stopProfiling() {
@@ -596,9 +636,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       const data = {
         timings: [...renderTimings],
         effectTimings: [...effectTimings],
+        updateTimings: [...updateTimings],
       };
       renderTimings.length = 0;
       effectTimings.length = 0;
+      updateTimings.length = 0;
       return data;
     },
   };
@@ -662,7 +704,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
 
         // Matched effects must never fall back to fn.name — fn is now always the
         // permanent profiling wrapper (named 'wrappedEffect'), not user code.
-        const reactionLabel = Compat.getLabel(r) || (effMeta ? effMeta.label : fn?.name) || null;
+        // Same for unmatched template-effect reactions: they are deliberately
+        // absent from effectMap, so gate the fn?.name fallback on the wrapper
+        // registry lest they display 'wrappedRenderEffect'.
+        const fallbackName = effMeta ? effMeta.label : fn && renderEffectWrappers.has(fn) ? null : fn?.name;
+        const reactionLabel = Compat.getLabel(r) || fallbackName || null;
         let reactionValue: unknown = null;
         if (isDerived) {
           try {

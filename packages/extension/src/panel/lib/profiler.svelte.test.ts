@@ -11,9 +11,11 @@ import {
   getIsRecording,
   getRenderTimings,
   getEffectTimings,
+  getUpdateTimings,
   getRecordingStartTime,
   getComponentStats,
   getEffectStats,
+  getUpdateStats,
   resetProfilerState,
 } from './profiler.svelte.js';
 import { processMessage, resetState } from './components.svelte.js';
@@ -51,6 +53,21 @@ function effectTiming(
   };
 }
 
+function updateTiming(
+  overrides: Partial<{
+    componentId: string | null;
+    componentName: string | null;
+    duration: number;
+  }> = {},
+) {
+  return {
+    componentId: 'c1',
+    componentName: 'Counter',
+    duration: 1,
+    ...overrides,
+  };
+}
+
 function componentNode(overrides: Partial<ComponentNode> = {}): ComponentNode {
   return {
     id: 'c1',
@@ -79,8 +96,24 @@ describe('profiler store', () => {
       expect(getIsRecording()).toBe(true);
       expect(getRenderTimings()).toEqual([]);
       expect(getEffectTimings()).toEqual([]);
+      expect(getUpdateTimings()).toEqual([]);
       expect(getRecordingStartTime()).not.toBeNull();
       expect(sendMock).toHaveBeenCalledWith({ type: 'profiler:start' });
+    });
+
+    it('startRecording clears update timings left over from a previous session', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [],
+        updateTimings: [updateTiming()],
+      });
+      expect(getUpdateTimings()).toHaveLength(1);
+
+      startRecording();
+      expect(getUpdateTimings()).toEqual([]);
     });
 
     it('stopRecording flips isRecording off and sends profiler:stop', () => {
@@ -98,12 +131,14 @@ describe('profiler store', () => {
         type: 'profiler:data',
         timings: [renderTiming()],
         effectTimings: [effectTiming()],
+        updateTimings: [updateTiming()],
       });
       expect(getRenderTimings()).toHaveLength(1);
 
       clearData();
       expect(getRenderTimings()).toEqual([]);
       expect(getEffectTimings()).toEqual([]);
+      expect(getUpdateTimings()).toEqual([]);
       expect(getRecordingStartTime()).toBeNull();
     });
 
@@ -152,6 +187,63 @@ describe('profiler store', () => {
           avgDuration: 2,
         },
       ]);
+    });
+
+    it('merges update timings into per-component update stats, grouped by componentName', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [],
+        updateTimings: [
+          updateTiming({ componentId: 'c1', componentName: 'Counter', duration: 2 }),
+          updateTiming({ componentId: 'c1', componentName: 'Counter', duration: 4 }),
+          updateTiming({ componentId: 'c2', componentName: 'TodoList', duration: 10 }),
+        ],
+      });
+
+      const updateStats = getUpdateStats();
+      const counterStats = updateStats.find((s) => s.componentName === 'Counter');
+      expect(counterStats).toEqual({ componentName: 'Counter', updateCount: 2, totalTime: 6, avgTime: 3, maxTime: 4 });
+
+      // Sorted by totalTime descending — TodoList (10) before Counter (6).
+      expect(updateStats.map((s) => s.componentName)).toEqual(['TodoList', 'Counter']);
+    });
+
+    it('falls back to componentId, then "—", when a componentName is missing', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [],
+        updateTimings: [
+          updateTiming({ componentId: 'c9', componentName: null }),
+          updateTiming({ componentId: null, componentName: null }),
+        ],
+      });
+
+      const names = getUpdateStats().map((s) => s.componentName);
+      expect(names).toContain('c9');
+      expect(names).toContain('—');
+    });
+
+    it('a profiler:data message missing updateTimings (stale bridge) does not throw and leaves update stats empty', () => {
+      startRecording();
+      stopRecording();
+      expect(() =>
+        processProfilerMessage({
+          type: 'profiler:data',
+          timings: [renderTiming()],
+          effectTimings: [effectTiming()],
+        }),
+      ).not.toThrow();
+
+      expect(getUpdateTimings()).toEqual([]);
+      expect(getUpdateStats()).toEqual([]);
+      // The rest of the message must still be processed normally.
+      expect(getRenderTimings()).toHaveLength(1);
     });
 
     it('carries componentId/componentName through and backfills a null-then-set sequence', () => {
@@ -320,13 +412,19 @@ describe('profiler store', () => {
     it('clears recording state and timings', () => {
       startRecording();
       stopRecording();
-      processProfilerMessage({ type: 'profiler:data', timings: [renderTiming()], effectTimings: [] });
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [renderTiming()],
+        effectTimings: [],
+        updateTimings: [updateTiming()],
+      });
 
       resetProfilerState();
 
       expect(getIsRecording()).toBe(false);
       expect(getRenderTimings()).toEqual([]);
       expect(getEffectTimings()).toEqual([]);
+      expect(getUpdateTimings()).toEqual([]);
       expect(getRecordingStartTime()).toBeNull();
     });
   });

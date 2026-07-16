@@ -64,7 +64,10 @@ $.get(signal)                 // State read (dependency tracking)`;
     </p>
     <p>This is a <strong>compile-time</strong> approach, meaning:</p>
     <ul>
-      <li>Zero runtime overhead when DevTools is not connected.</li>
+      <li>
+        Near-zero runtime overhead when idle — a single boolean check per instrumented effect run; timing work only
+        happens while the profiler records.
+      </li>
       <li>No monkey-patching or runtime proxies needed.</li>
       <li>Precise source mapping back to original <code>.svelte</code> files.</li>
     </ul>

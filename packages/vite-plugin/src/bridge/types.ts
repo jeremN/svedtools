@@ -74,4 +74,8 @@ export interface SvelteDevtoolsBridge {
   preMutation: (signal: Value) => void;
   onMutation: (signal: Value) => void;
   wrapEffect: (fn: (...args: unknown[]) => unknown, effectId: string) => (...args: unknown[]) => unknown;
+  wrapRenderEffect: (
+    fn: (...args: unknown[]) => unknown,
+    componentName?: string | null,
+  ) => (...args: unknown[]) => unknown;
 }
