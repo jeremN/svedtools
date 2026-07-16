@@ -1,6 +1,5 @@
 import type { BridgeToPanelMessage, PanelToBridgeMessage } from '@svelte-devtools/shared';
 
-const MAX_MESSAGES = 100;
 const RECONNECT_DELAY_MS = 1000;
 
 // -- Reactive state --
@@ -9,7 +8,6 @@ let connected = $state(false);
 let svelteDetected = $state(false);
 let svelteVersion: string | null = $state(null);
 let svelteUntested = $state(false);
-let messages: BridgeToPanelMessage[] = $state([]);
 
 let port: chrome.runtime.Port | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -56,10 +54,6 @@ export function getSvelteVersion(): string | null {
 
 export function getSvelteUntested(): boolean {
   return svelteUntested;
-}
-
-export function getMessages(): BridgeToPanelMessage[] {
-  return messages;
 }
 
 // -- Port lifecycle --
@@ -120,7 +114,6 @@ export function disconnect(): void {
   svelteDetected = false;
   svelteVersion = null;
   svelteUntested = false;
-  messages = [];
 
   // Notify disconnect listeners (e.g., component store reset) so a subsequent
   // connect() does not inherit the previous session's stale state. Guarded so it
@@ -135,11 +128,6 @@ function handleMessage(message: BridgeToPanelMessage): void {
     svelteDetected = true;
     svelteVersion = message.svelteVersion;
     svelteUntested = message.untested === true;
-  }
-
-  messages.push(message);
-  if (messages.length > MAX_MESSAGES) {
-    messages.splice(0, messages.length - MAX_MESSAGES);
   }
 
   // Notify subscribers (copy to handle mid-iteration mutation)

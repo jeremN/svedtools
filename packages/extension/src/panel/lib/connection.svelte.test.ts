@@ -9,7 +9,6 @@ import {
   getSvelteDetected,
   getSvelteVersion,
   getSvelteUntested,
-  getMessages,
 } from './connection.svelte.js';
 
 /** Minimal chrome.runtime.Port stand-in with real listener add/remove semantics. */
@@ -95,17 +94,6 @@ describe('connection store', () => {
     expect(getSvelteUntested()).toBe(true);
   });
 
-  it('appends incoming messages and trims the buffer to the last 100 (MAX_MESSAGES)', () => {
-    connect();
-    for (let i = 0; i < 105; i++) {
-      lastPort.emitMessage({ type: 'component:unmounted', id: `c${i}` });
-    }
-    const messages = getMessages();
-    expect(messages).toHaveLength(100);
-    expect((messages[0] as { id: string }).id).toBe('c5');
-    expect((messages.at(-1) as { id: string }).id).toBe('c104');
-  });
-
   it('notifies onMessage subscribers for every incoming message, until unsubscribed', () => {
     connect();
     const received: unknown[] = [];
@@ -128,7 +116,6 @@ describe('connection store', () => {
     expect(getConnected()).toBe(false);
     expect(getSvelteDetected()).toBe(false);
     expect(getSvelteVersion()).toBeNull();
-    expect(getMessages()).toEqual([]);
   });
 
   it('disconnect() notifies onDisconnect listeners exactly once', () => {
