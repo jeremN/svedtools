@@ -70,6 +70,17 @@ export interface ProfilerDataMessage {
     duration: number;
     depsCount: number;
   }>;
+  /**
+   * Optional (not required) because a stale/cached bridge from before plan 017
+   * can still emit profiler:data without this field — the panel guards with
+   * `message.updateTimings ?? []` (see profiler.svelte.ts) rather than assuming
+   * every connected page runs the current bridge build.
+   */
+  updateTimings?: Array<{
+    componentId: NodeId | null;
+    componentName: string | null;
+    duration: number;
+  }>;
 }
 
 export interface TraceUpdateMessage {

@@ -91,4 +91,18 @@ test.describe('Profiler', () => {
     expect(ecId).not.toBeNull();
     expect(data.effectTimings.some((t: any) => t.componentId === ecId && t.componentName === 'EffectChain')).toBe(true);
   });
+
+  test('update-cycle profiling reports components with no user $effect', async ({ page }) => {
+    await page.goto('/demos/counter');
+    await page.waitForFunction(() => {
+      const tree = (window.__svelte_devtools__?.getTree() ?? []) as Array<{ name: string }>;
+      return tree.some((n) => n.name === 'Counter');
+    });
+    await page.evaluate(() => window.__svelte_devtools__!.startProfiling());
+    await page.locator('[data-testid="counter-increment"]').click();
+    await page.locator('[data-testid="counter-increment"]').click();
+    const data = await page.evaluate(() => window.__svelte_devtools__!.stopProfiling());
+    expect(data.updateTimings.length).toBeGreaterThan(0);
+    expect(data.updateTimings.some((t: any) => t.componentName === 'Counter')).toBe(true);
+  });
 });

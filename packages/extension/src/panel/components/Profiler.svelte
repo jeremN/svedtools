@@ -4,8 +4,10 @@
     getRecordingStartTime,
     getComponentStats,
     getEffectStats,
+    getUpdateStats,
     getRenderTimings,
     getEffectTimings,
+    getUpdateTimings,
     startRecording,
     stopRecording,
     clearData,
@@ -14,11 +16,13 @@
   let recordingStartTime = $derived(getRecordingStartTime());
   let componentStats = $derived(getComponentStats());
   let effectStats = $derived(getEffectStats());
+  let updateStats = $derived(getUpdateStats());
   let renderTimings = $derived(getRenderTimings());
   let effectTimings = $derived(getEffectTimings());
-  let hasData = $derived(renderTimings.length > 0 || effectTimings.length > 0);
+  let updateTimings = $derived(getUpdateTimings());
+  let hasData = $derived(renderTimings.length > 0 || effectTimings.length > 0 || updateTimings.length > 0);
 
-  let activeSection: 'components' | 'effects' = $state('components');
+  let activeSection: 'components' | 'effects' | 'updates' = $state('components');
 
   let elapsed: number = $state(0);
 
@@ -61,7 +65,7 @@
   {/if}
 
   <span class="summary">
-    {renderTimings.length} mounts, {effectTimings.length} effects
+    {renderTimings.length} mounts, {updateTimings.length} updates, {effectTimings.length} effects
   </span>
 </div>
 
@@ -73,6 +77,9 @@
     onclick={() => (activeSection = 'components')}
   >
     Components
+  </button>
+  <button class="section-tab" class:active={activeSection === 'updates'} onclick={() => (activeSection = 'updates')}>
+    Updates
   </button>
   <button class="section-tab" class:active={activeSection === 'effects'} onclick={() => (activeSection = 'effects')}>
     Effects
@@ -102,6 +109,35 @@
             <tr style="background: {rowBackground(stat.maxTime)}">
               <td class="cell-name">{stat.name}</td>
               <td class="cell-number">{stat.renderCount}</td>
+              <td class="cell-time">{stat.totalTime.toFixed(2)}ms</td>
+              <td class="cell-time">{stat.avgTime.toFixed(2)}ms</td>
+              <td class="cell-time">{stat.maxTime.toFixed(2)}ms</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+{:else if activeSection === 'updates'}
+  {#if updateStats.length === 0}
+    <div class="empty-state">No update data recorded — interact with the page while recording</div>
+  {:else}
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Updates</th>
+            <th>Total &#9660;</th>
+            <th>Avg</th>
+            <th>Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each updateStats as stat (stat.componentName)}
+            <tr style="background: {rowBackground(stat.maxTime)}">
+              <td class="cell-name">{stat.componentName}</td>
+              <td class="cell-number">{stat.updateCount}</td>
               <td class="cell-time">{stat.totalTime.toFixed(2)}ms</td>
               <td class="cell-time">{stat.avgTime.toFixed(2)}ms</td>
               <td class="cell-time">{stat.maxTime.toFixed(2)}ms</td>

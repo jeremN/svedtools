@@ -21,6 +21,7 @@ interface TransformResult {
  * - $.pop(exports)                     → onPop for render timing
  * - $.state(value) / $.tag($.state(v)) → signal registration
  * - $.user_effect(fn)                  → effect registration
+ * - $.template_effect(fn)              → update-cycle timing (no registration)
  * - $.set(signal, value)               → mutation tracking
  * - $.update(signal)                   → mutation tracking
  */
@@ -93,6 +94,11 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
 
           case 'user_effect':
             instrumentUserEffect(s, node);
+            hasChanges = true;
+            break;
+
+          case 'template_effect':
+            instrumentTemplateEffect(s, node);
             hasChanges = true;
             break;
 
@@ -197,6 +203,22 @@ function instrumentUserEffect(s: MagicString, node: any): void {
     args[0].end,
     `; const __eid = window.__svelte_devtools__?.registerEffect(__fn); return window.__svelte_devtools__?.wrapEffect(__fn, __eid) ?? __fn; })()`,
   );
+}
+
+/**
+ * $.template_effect(fn)
+ * → $.template_effect((() => { const __fn = fn; return window.__svelte_devtools__?.wrapRenderEffect(__fn) ?? __fn; })())
+ *
+ * Timing-only wrapper for update-cycle profiling. Deliberately NOT
+ * registered into the effect registry — {#each} bodies emit one
+ * template_effect per row.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function instrumentTemplateEffect(s: MagicString, node: any): void {
+  const args = node.arguments;
+  if (args.length < 1) return;
+  s.prependLeft(args[0].start, `(() => { const __fn = `);
+  s.appendRight(args[0].end, `; return window.__svelte_devtools__?.wrapRenderEffect(__fn) ?? __fn; })()`);
 }
 
 /**

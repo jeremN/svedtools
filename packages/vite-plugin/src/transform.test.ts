@@ -74,6 +74,29 @@ function Profile($$anchor, $$props) {
 }
 `.trim();
 
+// Compiler-emitted update effect for a component with NO user $effect —
+// e.g. Counter, which only re-renders its text on click. Modeled on the
+// real compiled shape (advisor-verified probe, svelte 5.56.x client+dev):
+// `$.template_effect(() => $.set_text(text, $.get(count)));`.
+const TEMPLATE_EFFECT_FIXTURE = `
+import * as $ from "svelte/internal/client";
+
+function Counter($$anchor, $$props) {
+  $.push($$props, true, Counter);
+
+  let count = $.tag($.state(0), 'count');
+
+  var button = $.child($$anchor);
+  var text = $.child(button, true);
+
+  $.reset(button);
+  $.template_effect(() => $.set_text(text, $.get(count)));
+
+  $.append($$anchor, button);
+  return $.pop($$exports);
+}
+`.trim();
+
 describe('transformSvelteOutput', () => {
   it('returns null for non-Svelte code', () => {
     const result = transformSvelteOutput('const x = 1;', 'test.js');
@@ -105,6 +128,15 @@ describe('transformSvelteOutput', () => {
     const result = transformSvelteOutput(EFFECT_FIXTURE, 'EffectChain.svelte');
     expect(result).not.toBeNull();
     expect(result!.code).toContain('__svelte_devtools__?.registerEffect(');
+  });
+
+  it('instruments $.template_effect with wrapRenderEffect call, and NOT registerEffect', () => {
+    const result = transformSvelteOutput(TEMPLATE_EFFECT_FIXTURE, 'Counter.svelte');
+    expect(result).not.toBeNull();
+    expect(result!.code).toContain('__svelte_devtools__?.wrapRenderEffect(__fn)');
+    // Timing-only: template effects (including one-per-row {#each} bodies)
+    // must never be registered into the effect registry/graph.
+    expect(result!.code).not.toContain('registerEffect');
   });
 
   it('instruments $.tag with registerSignal call', () => {

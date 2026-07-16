@@ -82,6 +82,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     duration: number;
     depsCount: number;
   }> = [];
+  const updateTimings: Array<{
+    componentId: string | null;
+    componentName: string | null;
+    duration: number;
+  }> = [];
 
   // -- Tracing --
   const MAX_TRACE_PENDING = 200;
@@ -212,7 +217,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     getTree: () => unknown[];
     buildGraph: (filterComponentId: string | null) => { nodes: unknown[]; edges: unknown[] };
     startProfiling: () => void;
-    stopProfiling: () => { timings: unknown[]; effectTimings: unknown[] };
+    stopProfiling: () => { timings: unknown[]; effectTimings: unknown[]; updateTimings: unknown[] };
   } = {
     version: '0.0.1',
     componentMap,
@@ -475,6 +480,27 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       return wrapped;
     },
 
+    wrapRenderEffect(fn) {
+      // Timing-only wrapper for compiler-emitted template effects. Unlike
+      // user effects these are NEVER registered into effectMap/the graph:
+      // {#each} bodies create one per row, so registry entries would grow
+      // with list size. Owner is captured at wrap time — template effects
+      // are created inside the component's push/pop window — and the name
+      // is frozen immediately (never resolve history through live state).
+      const ownerId = currentComponentId();
+      const ownerName = ownerId ? (componentMap.get(ownerId)?.name ?? null) : null;
+      return function wrappedRenderEffect(this: unknown, ...args: unknown[]) {
+        // Call-time gate: the wrapper is permanent; only timing is conditional.
+        if (!profilingActive) return fn.apply(this, args);
+        const start = performance.now();
+        const result = fn.apply(this, args);
+        const duration = performance.now() - start;
+        if (updateTimings.length >= MAX_PROFILING_ENTRIES) updateTimings.shift();
+        updateTimings.push({ componentId: ownerId, componentName: ownerName, duration });
+        return result;
+      };
+    },
+
     getTree() {
       const nodes: unknown[] = [];
       for (const [, node] of componentMap) {
@@ -589,6 +615,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       profilingActive = true;
       renderTimings.length = 0;
       effectTimings.length = 0;
+      updateTimings.length = 0;
     },
 
     stopProfiling() {
@@ -596,9 +623,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       const data = {
         timings: [...renderTimings],
         effectTimings: [...effectTimings],
+        updateTimings: [...updateTimings],
       };
       renderTimings.length = 0;
       effectTimings.length = 0;
+      updateTimings.length = 0;
       return data;
     },
   };
