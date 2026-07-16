@@ -63,6 +63,10 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   const stableReactionIds = new WeakMap<Reaction, string>();
   const idToSignal = new Map<string, Value>();
   const idToReaction = new Map<string, WeakRef<Reaction>>();
+  // Template-effect wrappers (wrapRenderEffect) — tracked so graph/tracer
+  // label fallbacks never display the instrumentation wrapper's own fn name
+  // ('wrappedRenderEffect') for reactions that are absent from effectMap.
+  const renderEffectWrappers = new WeakSet<(...args: unknown[]) => unknown>();
 
   // -- Profiling --
   const MAX_PROFILING_ENTRIES = 10000;
@@ -480,16 +484,19 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       return wrapped;
     },
 
-    wrapRenderEffect(fn) {
+    wrapRenderEffect(fn, componentName) {
       // Timing-only wrapper for compiler-emitted template effects. Unlike
       // user effects these are NEVER registered into effectMap/the graph:
       // {#each} bodies create one per row, so registry entries would grow
-      // with list size. Owner is captured at wrap time — template effects
-      // are created inside the component's push/pop window — and the name
-      // is frozen immediately (never resolve history through live state).
+      // with list size. Owner is captured at wrap time — the transform bakes
+      // the lexical component fn name in as `componentName`, which is correct
+      // for rows created at ANY time (post-mount {#each} rows run with an
+      // empty bridge component stack); the push/pop-window map lookup is only
+      // a fallback. The name is frozen immediately either way (never resolve
+      // history through live state).
       const ownerId = currentComponentId();
-      const ownerName = ownerId ? (componentMap.get(ownerId)?.name ?? null) : null;
-      return function wrappedRenderEffect(this: unknown, ...args: unknown[]) {
+      const ownerName = componentName ?? (ownerId ? (componentMap.get(ownerId)?.name ?? null) : null);
+      const wrapped = function wrappedRenderEffect(this: unknown, ...args: unknown[]) {
         // Call-time gate: the wrapper is permanent; only timing is conditional.
         if (!profilingActive) return fn.apply(this, args);
         const start = performance.now();
@@ -499,6 +506,8 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         updateTimings.push({ componentId: ownerId, componentName: ownerName, duration });
         return result;
       };
+      renderEffectWrappers.add(wrapped);
+      return wrapped;
     },
 
     getTree() {
@@ -563,7 +572,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
             }
             // Matched effects must never fall back to fn.name — fn is now always the
             // permanent profiling wrapper (named 'wrappedEffect'), not user code.
-            const reactionLabel = Compat.getLabel(reaction) || (effMeta ? effMeta.label : fn?.name) || null;
+            // Same for unmatched template-effect reactions: they are deliberately
+            // absent from effectMap, so gate the fn?.name fallback on the wrapper
+            // registry lest they display 'wrappedRenderEffect'.
+            const fallbackName = effMeta ? effMeta.label : fn && renderEffectWrappers.has(fn) ? null : fn?.name;
+            const reactionLabel = Compat.getLabel(reaction) || fallbackName || null;
             let reactionValue: unknown = null;
             let reactionDirty = false;
             if (isDerived) {
@@ -691,7 +704,11 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
 
         // Matched effects must never fall back to fn.name — fn is now always the
         // permanent profiling wrapper (named 'wrappedEffect'), not user code.
-        const reactionLabel = Compat.getLabel(r) || (effMeta ? effMeta.label : fn?.name) || null;
+        // Same for unmatched template-effect reactions: they are deliberately
+        // absent from effectMap, so gate the fn?.name fallback on the wrapper
+        // registry lest they display 'wrappedRenderEffect'.
+        const fallbackName = effMeta ? effMeta.label : fn && renderEffectWrappers.has(fn) ? null : fn?.name;
+        const reactionLabel = Compat.getLabel(r) || fallbackName || null;
         let reactionValue: unknown = null;
         if (isDerived) {
           try {

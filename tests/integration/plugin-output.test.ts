@@ -90,7 +90,16 @@ describe('plugin output verification', () => {
   it('instruments $.template_effect with wrapRenderEffect, and NOT registerEffect (basic-counter has no user $effect)', async (ctx) => {
     const code = await getTransformed('basic-counter.svelte');
     if (!code.includes('$.template_effect(')) ctx.skip();
-    expect(code).toContain('wrapRenderEffect');
+    // Method-level optional call with the lexical component name baked in.
+    const wrapMatch = code.match(/wrapRenderEffect\?\.\(__sdt_fn, ("[\w$]+")\)/);
+    expect(wrapMatch).not.toBeNull();
+    // The baked name must be the SAME string instrumentPush bakes into onPush —
+    // onPush's name is what becomes ComponentNode.name on the bridge, so this
+    // equality is what guarantees update timings and the component tree agree
+    // (e.g. `basic-counter.svelte` compiles to fn `Basic_counter` in both).
+    const pushMatch = code.match(/onPush\(("[\w$]+"),/);
+    expect(pushMatch).not.toBeNull();
+    expect(wrapMatch![1]).toBe(pushMatch![1]);
     // basic-counter.svelte declares no $effect, so any registerEffect call in
     // this output would prove template effects are wrongly being registered.
     expect(code).not.toContain('registerEffect');

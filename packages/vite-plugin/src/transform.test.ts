@@ -97,6 +97,39 @@ function Counter($$anchor, $$props) {
 }
 `.trim();
 
+// A user who names their $state binding literally __fn — the template
+// effect's callback closes over it, so the instrumentation temp must not
+// shadow it (that's why the wrapper binds __sdt_fn, not __fn).
+const SHADOW_FN_FIXTURE = `
+import * as $ from "svelte/internal/client";
+
+function Shadow($$anchor, $$props) {
+  $.push($$props, true, Shadow);
+
+  let __fn = $.tag($.state(0), '__fn');
+
+  var text = $.child($$anchor, true);
+
+  $.template_effect(() => $.set_text(text, $.get(__fn)));
+
+  return $.pop($$exports);
+}
+`.trim();
+
+// A template_effect that appears BEFORE any $.push in the module (walk
+// order): the transform has no lexical component name yet, so the emitted
+// wrapRenderEffect call must carry NO second argument.
+const TEMPLATE_EFFECT_BEFORE_PUSH_FIXTURE = `
+import * as $ from "svelte/internal/client";
+
+$.template_effect(() => $.set_text(text, $.get(count)));
+
+function Counter($$anchor, $$props) {
+  $.push($$props, true, Counter);
+  return $.pop($$exports);
+}
+`.trim();
+
 describe('transformSvelteOutput', () => {
   it('returns null for non-Svelte code', () => {
     const result = transformSvelteOutput('const x = 1;', 'test.js');
@@ -133,10 +166,34 @@ describe('transformSvelteOutput', () => {
   it('instruments $.template_effect with wrapRenderEffect call, and NOT registerEffect', () => {
     const result = transformSvelteOutput(TEMPLATE_EFFECT_FIXTURE, 'Counter.svelte');
     expect(result).not.toBeNull();
-    expect(result!.code).toContain('__svelte_devtools__?.wrapRenderEffect(__fn)');
+    // Optional-call on the METHOD (`?.(`) — an older bridge missing
+    // wrapRenderEffect must degrade, not throw. Component name baked in as a
+    // string literal from the preceding $.push's 3rd arg.
+    expect(result!.code).toContain('__svelte_devtools__?.wrapRenderEffect?.(__sdt_fn, "Counter")');
     // Timing-only: template effects (including one-per-row {#each} bodies)
     // must never be registered into the effect registry/graph.
     expect(result!.code).not.toContain('registerEffect');
+  });
+
+  it('template-effect temp does not shadow a user binding literally named __fn', () => {
+    const result = transformSvelteOutput(SHADOW_FN_FIXTURE, 'Shadow.svelte');
+    expect(result).not.toBeNull();
+    // The instrumentation temp uses a devtools-prefixed name...
+    expect(result!.code).toContain('const __sdt_fn = ');
+    // ...never `const __fn`, which would shadow the user's closed-over binding
+    // (SHADOW_FN_FIXTURE has no $.user_effect, so no other instrumenter may
+    // legitimately introduce that temp here).
+    expect(result!.code).not.toContain('const __fn');
+    // The user's own read survives verbatim inside the callback body.
+    expect(result!.code).toContain('$.get(__fn)');
+  });
+
+  it('omits the component-name argument when template_effect precedes any $.push', () => {
+    const result = transformSvelteOutput(TEMPLATE_EFFECT_BEFORE_PUSH_FIXTURE, 'Counter.svelte');
+    expect(result).not.toBeNull();
+    // No lexical owner known yet → single-argument call, no trailing name.
+    expect(result!.code).toContain('wrapRenderEffect?.(__sdt_fn) ?? __sdt_fn');
+    expect(result!.code).not.toContain('wrapRenderEffect?.(__sdt_fn,');
   });
 
   it('instruments $.tag with registerSignal call', () => {

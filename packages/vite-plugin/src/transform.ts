@@ -54,6 +54,13 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
     // Track the $ namespace identifier (usually "import * as $ from ...")
     let dollarSign = '$';
 
+    // Lexically-known owning component: captured from the $.push call's 3rd
+    // argument (`$.push($$props, true, Counter)`). Passed to template-effect
+    // instrumentation so dynamically-created rows (e.g. {#each} rows created
+    // AFTER mount, when the bridge's component stack is empty) still get
+    // attributed to the right component.
+    let componentFnName: string | null = null;
+
     walk(ast, {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       enter(node: any) {
@@ -83,6 +90,10 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
 
         switch (method) {
           case 'push':
+            // Capture the component fn identifier before instrumenting — the
+            // compiled shape is `$.push($$props, true, Counter)`; a
+            // non-identifier 3rd arg yields undefined → null.
+            componentFnName = node.arguments[2]?.name ?? null;
             instrumentPush(s, node);
             hasChanges = true;
             break;
@@ -98,7 +109,7 @@ export function transformSvelteOutput(code: string, id: string): TransformResult
             break;
 
           case 'template_effect':
-            instrumentTemplateEffect(s, node);
+            instrumentTemplateEffect(s, node, componentFnName);
             hasChanges = true;
             break;
 
@@ -207,18 +218,31 @@ function instrumentUserEffect(s: MagicString, node: any): void {
 
 /**
  * $.template_effect(fn)
- * → $.template_effect((() => { const __fn = fn; return window.__svelte_devtools__?.wrapRenderEffect(__fn) ?? __fn; })())
+ * → $.template_effect((() => { const __sdt_fn = fn; return window.__svelte_devtools__?.wrapRenderEffect?.(__sdt_fn, "Counter") ?? __sdt_fn; })())
  *
  * Timing-only wrapper for update-cycle profiling. Deliberately NOT
  * registered into the effect registry — {#each} bodies emit one
  * template_effect per row.
+ *
+ * `componentFnName` is the lexically-enclosing component's fn name (from the
+ * preceding $.push); baked in as a string literal so rows created after mount
+ * (empty bridge component stack) still attribute correctly. Omitted when no
+ * $.push preceded this call in the module.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function instrumentTemplateEffect(s: MagicString, node: any): void {
+function instrumentTemplateEffect(s: MagicString, node: any, componentFnName: string | null): void {
   const args = node.arguments;
   if (args.length < 1) return;
-  s.prependLeft(args[0].start, `(() => { const __fn = `);
-  s.appendRight(args[0].end, `; return window.__svelte_devtools__?.wrapRenderEffect(__fn) ?? __fn; })()`);
+  // `__sdt_fn` (not `__fn`) — the binding sits in the callback's closure
+  // scope, so a devtools-prefixed name avoids shadowing user identifiers.
+  // Optional-call on the method: an older bridge object (HMR/cache skew)
+  // may not have wrapRenderEffect yet and must degrade to the original fn.
+  const nameArg = componentFnName ? `, ${JSON.stringify(componentFnName)}` : '';
+  s.prependLeft(args[0].start, `(() => { const __sdt_fn = `);
+  s.appendRight(
+    args[0].end,
+    `; return window.__svelte_devtools__?.wrapRenderEffect?.(__sdt_fn${nameArg}) ?? __sdt_fn; })()`,
+  );
 }
 
 /**
