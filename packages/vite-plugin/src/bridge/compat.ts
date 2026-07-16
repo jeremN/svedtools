@@ -6,7 +6,10 @@ import type { Value, Reaction, ComponentFn } from './types.js';
  * through this object. When Svelte renames `Value.v` or `Reaction.deps`,
  * this is the only file that needs to change.
  *
- * All accessors are read-only — the bridge never mutates Svelte internals.
+ * All accessors are read-only, with ONE deliberate exception: setValue(), the
+ * single write chokepoint for panel-initiated state edits (plan 018). It
+ * writes through the app's own `$.set` (captured internals namespace), never
+ * by assigning private fields directly.
  */
 
 export const FILENAME_SYMBOL = Symbol.for('svelte.filename');
@@ -114,6 +117,48 @@ export const Compat = {
   isEffect(r: Reaction): boolean {
     return !this.isDerived(r);
   },
+
+  /**
+   * True when `signal` is a Value node whose flags mark it a derived. Needed
+   * because the transform registers $.tag($.state(...)) and
+   * $.tag($.derived(...)) identically (registerSignal's type defaults to
+   * 'state'), so registration-time meta cannot tell them apart — classify at
+   * read time instead. Plain sources carry f: 0 (no DERIVED bit) and resolve
+   * false via the flags path; proxies (object $state) are not Value-shaped
+   * and return false without consulting flags.
+   */
+  isDerivedSignal(signal: Value): boolean {
+    if (!(signal && typeof signal === 'object' && 'v' in signal && 'reactions' in signal && 'equals' in signal)) {
+      return false;
+    }
+    return this.isDerived(signal as unknown as Reaction);
+  },
+
+  /**
+   * THE write chokepoint (plan 018): set a source signal's value through the
+   * app's own `$.set`, so equality checks, proxying and reaction scheduling
+   * stay Svelte's. `internals` is a compiled module's `$` namespace captured
+   * by main.ts from onPop. Refuses anything that is not a plain source (not
+   * Value-shaped, or derived-flagged) and degrades to false instead of
+   * throwing. `should_proxy: true` is safe for primitives — Svelte's proxy()
+   * returns non-objects unchanged — and correct for objects assigned into
+   * reassignable state.
+   */
+  setValue(internals: unknown, signal: Value, value: unknown): boolean {
+    if (!(signal && typeof signal === 'object' && 'v' in signal && 'reactions' in signal && 'equals' in signal)) {
+      return false;
+    }
+    if (this.isDerivedSignal(signal)) return false;
+    const set = (internals as { set?: unknown } | null | undefined)?.set;
+    if (typeof set !== 'function') return false;
+    try {
+      (set as (s: Value, v: unknown, p?: boolean) => unknown)(signal, value, true);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   getReactionFn(r: Reaction): ((...args: unknown[]) => unknown) | null {
     return r.fn ?? null;
   },

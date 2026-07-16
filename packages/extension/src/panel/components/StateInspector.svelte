@@ -44,7 +44,7 @@
             <span class="signal-label unnamed">unnamed</span>
           {/if}
           <span class="signal-value">
-            <ValueTree rootId={signal.id} value={signal.value} />
+            <ValueTree rootId={signal.id} value={signal.value} editable={signal.type === 'state'} />
           </span>
         </div>
       {/each}

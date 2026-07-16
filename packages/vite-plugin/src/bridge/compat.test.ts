@@ -152,6 +152,103 @@ describe('Compat.registerComponentTeardown', () => {
   });
 });
 
+// Plan 018 — the write chokepoint. Signal fixtures mirror the Value-node shape
+// used throughout this file: { f, v, reactions, equals }. `f: 0` (no DERIVED
+// bit) marks a plain source; `f: DERIVED_FLAG` marks a tagged derived.
+describe('Compat.isDerivedSignal', () => {
+  const DERIVED = 1 << 1;
+
+  it('returns false for a source-shaped node (f: 0)', () => {
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    expect(Compat.isDerivedSignal(source)).toBe(false);
+  });
+
+  it('returns true for a derived-shaped node (DERIVED flag set)', () => {
+    const derived = { f: DERIVED, v: 1, reactions: null, equals: () => false } as never;
+    expect(Compat.isDerivedSignal(derived)).toBe(true);
+  });
+
+  it('returns false for a plain object (proxy stand-in, not Value-shaped)', () => {
+    const proxy = { a: 1 } as never;
+    expect(Compat.isDerivedSignal(proxy)).toBe(false);
+  });
+
+  it('returns false (no throw) for null/primitive input', () => {
+    for (const bad of [null, undefined, 0, 'str', true] as unknown[]) {
+      const s = bad as never;
+      expect(() => Compat.isDerivedSignal(s)).not.toThrow();
+      expect(Compat.isDerivedSignal(s)).toBe(false);
+    }
+  });
+});
+
+describe('Compat.setValue — the write chokepoint (plan 018)', () => {
+  const DERIVED = 1 << 1;
+
+  function recordingInternals() {
+    const calls: unknown[][] = [];
+    return {
+      calls,
+      internals: {
+        set: (...args: unknown[]) => {
+          calls.push(args);
+          return undefined;
+        },
+      },
+    };
+  }
+
+  it('calls internals.set(signal, value, true) exactly once for a valid source and returns true', () => {
+    const { calls, internals } = recordingInternals();
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    const ok = Compat.setValue(internals, source, 42);
+    expect(ok).toBe(true);
+    expect(calls).toEqual([[source, 42, true]]);
+  });
+
+  it('refuses a derived-flagged node without calling set', () => {
+    const { calls, internals } = recordingInternals();
+    const derived = { f: DERIVED, v: 1, reactions: null, equals: () => false } as never;
+    const ok = Compat.setValue(internals, derived, 42);
+    expect(ok).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  it('refuses non-Value-shaped input without calling set', () => {
+    const { calls, internals } = recordingInternals();
+    const proxy = { a: 1 } as never;
+    const ok = Compat.setValue(internals, proxy, 42);
+    expect(ok).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  it('refuses when internals is null', () => {
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    expect(Compat.setValue(null, source, 42)).toBe(false);
+  });
+
+  it('refuses when internals has no set function', () => {
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    expect(Compat.setValue({}, source, 42)).toBe(false);
+  });
+
+  it('refuses when internals.set is not a function', () => {
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    expect(Compat.setValue({ set: 'nope' }, source, 42)).toBe(false);
+  });
+
+  it('returns false (no throw) when set throws', () => {
+    const source = { f: 0, v: 1, reactions: null, equals: () => false } as never;
+    const throwingInternals = {
+      set: () => {
+        throw new Error('boom');
+      },
+    };
+    expect(() => Compat.setValue(throwingInternals, source, 42)).not.toThrow();
+    expect(Compat.setValue(throwingInternals, source, 42)).toBe(false);
+  });
+});
+
 describe('TESTED_SVELTE_RANGE', () => {
   it('derives from the tested major (single source of truth, no drift)', () => {
     expect(TESTED_SVELTE_RANGE).toBe('>=5.0.0 <6.0.0');
