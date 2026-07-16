@@ -136,8 +136,7 @@
       Component state can contain complex objects, circular references, and non-serializable values (functions,
       symbols). Wire payloads are serialized by a small serializer inlined into the page bridge (<code
         >packages/vite-plugin/src/bridge/serializer.ts</code
-      >); <code>packages/shared</code> carries the protocol types and a panel-side mirror. The bridge serializer handles this
-      by:
+      >); <code>packages/shared</code> carries the protocol types. The bridge serializer handles this by:
     </p>
     <ul>
       <li>
@@ -170,7 +169,7 @@
   packages/
     vite-plugin/    # Vite plugin (AST transforms + bridge injection)
     extension/      # Chrome extension (content script, service worker, panel)
-    shared/         # Wire protocol types and serialization utilities
+    shared/         # Wire protocol types
   apps/
     docs/           # This documentation site (SvelteKit + static adapter)
   playground/       # Demo app the dev server runs for manual testing
