@@ -4,6 +4,8 @@
     getRootIds,
     getSelectedId,
     getSearchFilter,
+    getPickerActive,
+    setPickerActive,
     selectComponent,
   } from '../lib/components.svelte.js';
   import { send } from '../lib/connection.svelte.js';
@@ -13,6 +15,7 @@
   let rootIds = $derived(getRootIds());
   let selectedId = $derived(getSelectedId());
   let searchFilter = $derived(getSearchFilter());
+  let pickerActive = $derived(getPickerActive());
 
   let expanded: Record<NodeId, boolean> = $state({});
 
@@ -40,6 +43,16 @@
   function handleOpenInEditor(event: MouseEvent, filename: string): void {
     event.stopPropagation();
     send({ type: 'open-in-editor', file: filename, line: 1, column: 1 });
+  }
+
+  function togglePicker(): void {
+    if (pickerActive) {
+      setPickerActive(false);
+      send({ type: 'picker:stop' });
+    } else {
+      setPickerActive(true);
+      send({ type: 'picker:start' });
+    }
   }
 
   function handleKeyDown(id: NodeId, event: KeyboardEvent): void {
@@ -166,6 +179,19 @@
   </div>
 {/snippet}
 
+<div class="toolbar">
+  <button
+    class="picker-btn"
+    class:active={pickerActive}
+    aria-pressed={pickerActive}
+    title={pickerActive ? 'Cancel element picker' : 'Pick an element from the page'}
+    aria-label={pickerActive ? 'Cancel element picker' : 'Pick an element from the page'}
+    onclick={togglePicker}
+  >
+    &#10010;
+  </button>
+</div>
+
 <div class="tree-container" role="tree">
   {#if filteredNodes}
     {#if filteredNodes.length === 0}
@@ -185,6 +211,50 @@
 </div>
 
 <style>
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .picker-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    border: 1px solid var(--border-default);
+    font-size: var(--text-base);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .picker-btn:hover {
+    color: var(--text-default);
+  }
+
+  .picker-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .picker-btn.active {
+    background: color-mix(in oklab, var(--accent) 16%, var(--surface-overlay));
+    color: var(--accent-text);
+    border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+
   .tree-container {
     overflow-y: auto;
     flex: 1;

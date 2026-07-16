@@ -23,6 +23,15 @@ onMessage((m) => {
   if (m.type === 'bridge:ready') send({ type: 'tree:request' });
 });
 
+// The store can't send (no port import there) — a landed pick loads the
+// state inspector the same way a tree click does (see handleSelect in
+// ComponentTree.svelte).
+onMessage((m) => {
+  if (m.type === 'picker:picked' && m.componentId !== null) {
+    send({ type: 'inspect:component', id: m.componentId });
+  }
+});
+
 // Live drill-down: when the inspected component or the graph changes, debounce a
 // refresh of the selected component snapshot + all open sub-trees.
 onMessage((m) => {
