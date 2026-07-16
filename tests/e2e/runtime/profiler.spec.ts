@@ -89,6 +89,6 @@ test.describe('Profiler', () => {
       return tree.find((n) => n.name === 'EffectChain')?.id ?? null;
     });
     expect(ecId).not.toBeNull();
-    expect(data.effectTimings.some((t: any) => t.componentId === ecId)).toBe(true);
+    expect(data.effectTimings.some((t: any) => t.componentId === ecId && t.componentName === 'EffectChain')).toBe(true);
   });
 });

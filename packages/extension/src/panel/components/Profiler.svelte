@@ -10,14 +10,12 @@
     stopRecording,
     clearData,
   } from '../lib/profiler.svelte.js';
-  import { getComponentMap } from '../lib/components.svelte.js';
   let isRecording = $derived(getIsRecording());
   let recordingStartTime = $derived(getRecordingStartTime());
   let componentStats = $derived(getComponentStats());
   let effectStats = $derived(getEffectStats());
   let renderTimings = $derived(getRenderTimings());
   let effectTimings = $derived(getEffectTimings());
-  let componentMap = $derived(getComponentMap());
   let hasData = $derived(renderTimings.length > 0 || effectTimings.length > 0);
 
   let activeSection: 'components' | 'effects' = $state('components');
@@ -131,7 +129,7 @@
         <tbody>
           {#each effectStats as stat (stat.effectId)}
             <tr>
-              <td class="cell-name">{componentMap[stat.componentId ?? '']?.name ?? '—'}</td>
+              <td class="cell-name">{stat.componentName ?? '—'}</td>
               <td class="cell-name">
                 {#if stat.label}
                   {stat.label}

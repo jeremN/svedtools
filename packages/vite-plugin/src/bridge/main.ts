@@ -78,6 +78,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     effectId: string;
     label: string | null;
     componentId: string | null;
+    componentName: string | null;
     duration: number;
     depsCount: number;
   }> = [];
@@ -457,6 +458,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
           effectId,
           label: effMeta?.label || null,
           componentId: effMeta?.componentId ?? null,
+          componentName: effMeta?.componentId ? (componentMap.get(effMeta.componentId)?.name ?? null) : null,
           duration,
           depsCount: reactionRef ? Compat.getReactionDeps(reactionRef).length : 0,
         });

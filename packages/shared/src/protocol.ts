@@ -66,6 +66,7 @@ export interface ProfilerDataMessage {
     effectId: NodeId;
     label: string | null;
     componentId: NodeId | null;
+    componentName: string | null;
     duration: number;
     depsCount: number;
   }>;

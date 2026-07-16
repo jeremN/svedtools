@@ -7,6 +7,7 @@ export interface EffectTiming {
   effectId: NodeId;
   label: string | null;
   componentId: NodeId | null;
+  componentName: string | null;
   duration: number;
   depsCount: number;
 }
@@ -23,6 +24,7 @@ export interface EffectStats {
   effectId: NodeId;
   label: string | null;
   componentId: NodeId | null;
+  componentName: string | null;
   execCount: number;
   totalDuration: number;
   avgDuration: number;
@@ -95,19 +97,34 @@ export function getEffectStats(): EffectStats[] {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const map = new Map<
     NodeId,
-    { effectId: NodeId; label: string | null; componentId: NodeId | null; count: number; total: number }
+    {
+      effectId: NodeId;
+      label: string | null;
+      componentId: NodeId | null;
+      componentName: string | null;
+      count: number;
+      total: number;
+    }
   >();
 
   for (const t of effectTimings) {
     let entry = map.get(t.effectId);
     if (!entry) {
-      entry = { effectId: t.effectId, label: t.label, componentId: t.componentId, count: 0, total: 0 };
+      entry = {
+        effectId: t.effectId,
+        label: t.label,
+        componentId: t.componentId,
+        componentName: t.componentName,
+        count: 0,
+        total: 0,
+      };
       map.set(t.effectId, entry);
     }
     entry.count++;
     entry.total += t.duration;
     if (!entry.label && t.label) entry.label = t.label;
     if (!entry.componentId && t.componentId) entry.componentId = t.componentId;
+    if (!entry.componentName && t.componentName) entry.componentName = t.componentName;
   }
 
   const stats: EffectStats[] = [];
@@ -116,6 +133,7 @@ export function getEffectStats(): EffectStats[] {
       effectId: entry.effectId,
       label: entry.label,
       componentId: entry.componentId,
+      componentName: entry.componentName,
       execCount: entry.count,
       totalDuration: entry.total,
       avgDuration: entry.count > 0 ? entry.total / entry.count : 0,
