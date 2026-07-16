@@ -118,6 +118,30 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
       keeping the overhead minimal.
     </p>
   </section>
+
+  <section>
+    <h2>Security: dev-server WebSocket</h2>
+    <p>
+      Jump-to-source and the panel's source viewer reach the Vite dev server over its WebSocket channel &mdash; the
+      <code>open-in-editor</code> and <code>get-source</code> handlers the plugin registers. Both are clamped to files
+      inside your project root, and <code>get-source</code> further restricts reads to recognized source extensions.
+    </p>
+    <p>
+      That channel is authenticated by Vite itself. Since the fix for
+      <a href="https://github.com/advisories/GHSA-vg6x-rcgg-rjx6">CVE-2025-24010</a>, Vite rejects any WebSocket upgrade
+      that carries an <code>Origin</code> header without the per-server token it embeds only in the client it serves to
+      your dev origin. Browser WebSocket handshakes always send <code>Origin</code>, so a malicious website you visit
+      while the dev server is running cannot drive these handlers.
+    </p>
+    <p>
+      Because the plugin relies on that gate, it requires a Vite that ships it: <strong
+        >Vite&nbsp;5.4.12 / 6.0.9 or newer</strong
+      >
+      (7.x and 8.x already include it). This is enforced by the plugin's
+      <code>peerDependencies</code>. Do not set <code>legacy.skipWebSocketTokenCheck: true</code> in your Vite config while
+      the DevTools plugin is enabled &mdash; it disables exactly the authentication these handlers depend on.
+    </p>
+  </section>
 </article>
 
 <style>
