@@ -193,6 +193,23 @@ function instrumentPop(s: MagicString, node: any, dollarSign: string): void {
 }
 
 /**
+ * Injected-temporary naming contract.
+ *
+ * Every IIFE the instrumenters below emit binds its locals under the reserved
+ * `__sdt_` prefix (`__sdt_fn`, `__sdt_eid`, `__sdt_sig`, `__sdt_r`, `__sdt_s`).
+ * The prefix is treated as reserved: user source is assumed never to declare a
+ * `$state`/local/function named `__sdt_*`. If it did, an injected
+ * `const __sdt_x = <expr>` could shadow it (a TDZ crash, or a silent rebind if
+ * the name also appears in a wrapped value expression), and the bridge's
+ * `registerEffect` label filter would drop a user function whose name starts
+ * with `__sdt_`. A per-call gensym would make this provably collision-free, but
+ * is deliberately NOT done: this transform only instruments the user's own dev
+ * build, a `__sdt_`-named user binding is effectively never written, and the
+ * failure would be immediate and self-evident. Keep all injected temps under
+ * this prefix so the label filter (drops `__sdt_`-prefixed inferred fn names)
+ * stays correct across future temp renames.
+ */
+/**
  * $.user_effect(fn)
  * → $.user_effect((() => { const __sdt_fn = fn; const __sdt_eid = window.__svelte_devtools__?.registerEffect(__sdt_fn); return window.__svelte_devtools__?.wrapEffect(__sdt_fn, __sdt_eid) ?? __sdt_fn; })())
  *
