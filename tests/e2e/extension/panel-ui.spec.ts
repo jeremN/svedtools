@@ -168,4 +168,40 @@ test.describe('Panel UI', () => {
     await expect(appPage.locator('[data-testid="counter-value"]')).toHaveText('43');
     await expect(countRow).toContainText('43');
   });
+
+  test('picking an element from the page selects its component and loads the state inspector', async ({ context }) => {
+    const appPage = await context.newPage();
+    await appPage.goto('/demos/counter');
+    await appPage.waitForFunction(() => !!window.__svelte_devtools__);
+
+    const { sw, origin: extensionOrigin } = await getExtensionOrigin(context);
+    const tabId = await getActiveTabId(sw);
+    expect(tabId, 'chrome.tabs.query({ active: true }) returned no tab for the app page').toBeDefined();
+    await waitForBridgeCached(sw, tabId!);
+
+    const panelPage = await openPanelPage(context, extensionOrigin, tabId!);
+    await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 5000 });
+
+    const pickerButton = panelPage.locator('.picker-btn');
+    await expect(pickerButton).toHaveAttribute('aria-pressed', 'false');
+    await pickerButton.click();
+    await expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
+
+    // Click the increment button on the inspected page while picking — the
+    // picker resolves and swallows it (no increment).
+    const increment = appPage.locator('[data-testid="counter-increment"]');
+    const box = await increment.boundingBox();
+    expect(box, 'increment button has no layout box').toBeTruthy();
+    await appPage.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+
+    // Tree selection + state inspector show the owning component.
+    await expect(panelPage.locator('.tree-row.selected .component-name', { hasText: 'Counter' })).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(panelPage.locator('.signal-row', { hasText: 'count' }).first()).toBeVisible({ timeout: 5000 });
+
+    // Picking mode ended and the click didn't reach the app.
+    await expect(pickerButton).toHaveAttribute('aria-pressed', 'false');
+    await expect(appPage.locator('[data-testid="counter-value"]')).toHaveText('0');
+  });
 });
