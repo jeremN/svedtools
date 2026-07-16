@@ -10,7 +10,7 @@
     <li>
       <a href={resolve('/docs/installation')}>
         <strong>Installation</strong>
-        <span>Install the npm package, configure Vite, and load the Chrome extension.</span>
+        <span>Install from source, configure Vite, and load the Chrome extension.</span>
       </a>
     </li>
     <li>
@@ -29,6 +29,12 @@
       <a href={resolve('/docs/architecture')}>
         <strong>Architecture</strong>
         <span>System diagram, data flow, wire protocol, and key concepts.</span>
+      </a>
+    </li>
+    <li>
+      <a href={resolve('/docs/troubleshooting')}>
+        <strong>Troubleshooting</strong>
+        <span>Common problems getting the panel running, and what causes them.</span>
       </a>
     </li>
   </ul>

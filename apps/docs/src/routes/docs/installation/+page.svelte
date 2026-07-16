@@ -1,5 +1,14 @@
 <script lang="ts">
-  const installCmd = 'pnpm add -D vite-plugin-svelte-devtools';
+  const cloneCmd = `git clone https://github.com/jeremN/svedtools.git
+cd svedtools
+pnpm install
+pnpm build`;
+
+  const localDep = `{
+  "devDependencies": {
+    "vite-plugin-svelte-devtools": "file:../svedtools/packages/vite-plugin"
+  }
+}`;
 
   const viteConfig = `// vite.config.ts
 import { defineConfig } from 'vite';
@@ -14,7 +23,9 @@ export default defineConfig({
 });`;
 
   const viteConfigWithOptions = `svelteDevtools({
-  enabled: true, // default: true in dev, false in production
+  enabled: true, // default: true; set false to disable instrumentation
+  // Regardless of the flag, the plugin only applies to the dev server
+  // (apply: 'serve'); it never runs on a production or static build.
 })`;
 </script>
 
@@ -23,16 +34,23 @@ export default defineConfig({
   <p class="lead">Get the Svelte 5 DevTools running in under two minutes.</p>
 
   <section>
-    <h2>1. Install the package</h2>
-    <p>Add the Vite plugin as a dev dependency:</p>
-    <pre><code>{installCmd}</code></pre>
-    <p class="note">Also works with <code>npm install -D</code> or <code>yarn add -D</code>.</p>
+    <h2>1. Install from source</h2>
+    <p class="note">
+      This is a private, coworker-testing project. It isn't published to npm or the Chrome Web Store; you install it
+      from a clone of the repo.
+    </p>
+    <pre><code>{cloneCmd}</code></pre>
+    <p>
+      <code>pnpm build</code> builds every workspace package, including the Vite plugin and the extension. Reference the built
+      plugin from your app as a local dependency, e.g.:
+    </p>
+    <pre><code>{localDep}</code></pre>
   </section>
 
   <section>
     <h2>2. Configure Vite</h2>
     <p>
-      Add <code>svelteDevtools()</code> to your Vite config, <strong>after</strong> the
+      Add <code>svelteDevtools()</code> to your Vite config, after the
       <code>svelte()</code> plugin:
     </p>
     <pre><code>{viteConfig}</code></pre>
@@ -43,7 +61,7 @@ export default defineConfig({
   <section>
     <h2>3. Load the Chrome extension</h2>
     <ol>
-      <li>Build the extension or locate the <code>packages/extension/dist</code> directory.</li>
+      <li>Run <code>pnpm build</code> first so <code>packages/extension/dist</code> exists.</li>
       <li>
         Open Chrome and navigate to <code>chrome://extensions</code>.
       </li>

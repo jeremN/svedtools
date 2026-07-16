@@ -28,6 +28,7 @@
           <li><a href={resolve('/docs/vite-plugin')} onclick={() => (sidebarOpen = false)}>Vite Plugin</a></li>
           <li><a href={resolve('/docs/extension')} onclick={() => (sidebarOpen = false)}>Extension</a></li>
           <li><a href={resolve('/docs/architecture')} onclick={() => (sidebarOpen = false)}>Architecture</a></li>
+          <li><a href={resolve('/docs/troubleshooting')} onclick={() => (sidebarOpen = false)}>Troubleshooting</a></li>
         </ul>
       </section>
       <section>
