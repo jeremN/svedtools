@@ -127,20 +127,35 @@ $.tag_proxy(proxy, label)            // Signal naming (object/array/Map $state)`
       inside your project root, and <code>get-source</code> further restricts reads to recognized source extensions.
     </p>
     <p>
-      That channel is authenticated by Vite itself. Since the fix for
-      <a href="https://github.com/advisories/GHSA-vg6x-rcgg-rjx6">CVE-2025-24010</a>, Vite rejects any WebSocket upgrade
-      that carries an <code>Origin</code> header without the per-server token it embeds only in the client it serves to
-      your dev origin. Browser WebSocket handshakes always send <code>Origin</code>, so a malicious website you visit
-      while the dev server is running cannot drive these handlers.
+      The threat these handlers are hardened against is a malicious website you visit while the dev server is running
+      (cross-site WebSocket hijacking). Vite closes that path: since the fix for
+      <a href="https://github.com/advisories/GHSA-vg6x-rcgg-rjx6">CVE-2025-24010</a>, it rejects any WebSocket upgrade
+      that carries an <code>Origin</code> header without the per-server token it embeds in the client it serves to your
+      dev origin. Browser WebSocket handshakes always send <code>Origin</code>, so a cross-origin site cannot connect.
+      That is why the plugin requires <strong>Vite 5.4.12 / 6.0.9 or newer</strong> (7.x and 8.x already include the
+      fix), enforced by its <code>peerDependencies</code>.
     </p>
-    <p>
-      Because the plugin relies on that gate, it requires a Vite that ships it: <strong
-        >Vite&nbsp;5.4.12 / 6.0.9 or newer</strong
-      >
-      (7.x and 8.x already include it). This is enforced by the plugin's
-      <code>peerDependencies</code>. Do not set <code>legacy.skipWebSocketTokenCheck: true</code> in your Vite config while
-      the DevTools plugin is enabled &mdash; it disables exactly the authentication these handlers depend on.
-    </p>
+    <p>That guarantee is specifically about browser origins. It does <em>not</em> cover:</p>
+    <ul>
+      <li>
+        <strong>Non-browser clients</strong> (for example another local process) that omit the <code>Origin</code>
+        header: Vite lets these connect without the token. On a localhost-only dev server this already requires code running
+        on your machine, but if you expose the server to the network (<code>vite --host</code>) a peer on your LAN can
+        reach <code>open-in-editor</code> and <code>get-source</code>. A reachable dev server already serves your source
+        modules over HTTP, so <code>get-source</code> adds little there; <code>open-in-editor</code>, which launches
+        your editor, is the capability to keep in mind.
+      </li>
+      <li>
+        <strong>Unsafe server config:</strong> <code>server.allowedHosts: true</code> or DNS-rebinding setups can let
+        another site recover the token, and <code>legacy.skipWebSocketTokenCheck: true</code> disables the check outright.
+        Do not set either while the DevTools plugin is enabled.
+      </li>
+      <li>
+        <strong>Same-origin script execution</strong> (such as an XSS in your own app) is already inside the trust boundary
+        &mdash; it can reach anything the page can.
+      </li>
+    </ul>
+    <p>For DevTools use, keep the dev server bound to <code>localhost</code>.</p>
   </section>
 </article>
 
