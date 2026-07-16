@@ -6,7 +6,8 @@
  * the clicked element and reports it back through `onPick`, then stops.
  * Escape cancels (reports `null`). Listeners are installed on the CAPTURE
  * phase so the picker sees events before the page's own handlers, and the
- * click handler prevents the page from reacting to the pick.
+ * whole mouse activation sequence (pointerdown through click) is swallowed
+ * so the page never reacts to the pick.
  */
 
 import { showHighlight } from './highlight.js';
@@ -25,6 +26,18 @@ function resolvePickableElement(target: EventTarget | null): Element | null {
 let picking = false;
 let onPick: ((el: Element | null) => void) | null = null;
 
+// The full activation sequence (pointerdown → mousedown → pointerup →
+// mouseup → click) must be swallowed while picking — a page handler on any
+// of them would otherwise still fire during a pick (drag starts, focus,
+// irreversible work). mousemove is deliberately NOT swallowed: the hover
+// highlight rides on it, and pages tracking the cursor stay harmless.
+const SWALLOWED_EVENTS = ['pointerdown', 'pointerup', 'mousedown', 'mouseup'] as const;
+
+function swallowEvent(event: Event): void {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
 function handleMouseMove(event: MouseEvent): void {
   const el = resolvePickableElement(event.target);
   showHighlight(el ? [el.getBoundingClientRect()] : null);
@@ -32,19 +45,24 @@ function handleMouseMove(event: MouseEvent): void {
 
 function handleClick(event: MouseEvent): void {
   event.preventDefault();
-  event.stopPropagation();
+  event.stopImmediatePropagation();
   onPick?.(resolvePickableElement(event.target));
 }
 
 function handleKeyDown(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return;
+  // Cancel is ours alone — the app's own Escape handlers must not fire.
+  event.preventDefault();
+  event.stopImmediatePropagation();
   onPick?.(null);
 }
 
 /**
- * Arms picking mode: installs capture-phase mousemove/click/keydown
- * listeners on `document` and sets a crosshair cursor. `onPick` fires once
- * — on click (with the resolved element, or null if none resolves) or on
+ * Arms picking mode: installs capture-phase listeners on `document`
+ * (mousemove for the hover highlight; click to resolve the pick; keydown
+ * for Escape; plus swallow-only handlers for the rest of the mouse
+ * activation sequence) and sets a crosshair cursor. `onPick` fires once —
+ * on click (with the resolved element, or null if none resolves) or on
  * Escape (always null) — the caller is responsible for calling `stopPicker`
  * afterward (one pick per activation; see bridge/main.ts's picker:start
  * case). Calling while already picking restarts cleanly (no duplicate
@@ -58,6 +76,9 @@ export function startPicker(onPickCallback: (el: Element | null) => void): void 
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('keydown', handleKeyDown, true);
+  for (const type of SWALLOWED_EVENTS) {
+    document.addEventListener(type, swallowEvent, true);
+  }
 }
 
 /** Disarms picking mode: removes listeners, clears the highlight, restores the cursor. Idempotent. */
@@ -69,5 +90,8 @@ export function stopPicker(): void {
   document.removeEventListener('mousemove', handleMouseMove, true);
   document.removeEventListener('click', handleClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
+  for (const type of SWALLOWED_EVENTS) {
+    document.removeEventListener(type, swallowEvent, true);
+  }
   showHighlight(null);
 }

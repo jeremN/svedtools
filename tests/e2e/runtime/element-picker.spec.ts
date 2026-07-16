@@ -101,4 +101,76 @@ test.describe('Element picker', () => {
     const cursor = await page.evaluate(() => document.documentElement.style.cursor);
     expect(cursor).toBe('');
   });
+
+  test('the whole mouse activation sequence is swallowed while picking, and restored after', async ({ page }) => {
+    await page.goto('/demos/counter');
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
+
+    // Probe listeners directly on the target element — any of these firing
+    // during a pick means the page reacted to part of the activation
+    // sequence (drag start, focus, irreversible pointerdown work).
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="counter-increment"]')!;
+      (window as any).__probes = { pointerdown: 0, mousedown: 0, pointerup: 0, mouseup: 0 };
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+        el.addEventListener(type, () => (window as any).__probes[type]++);
+      }
+    });
+
+    await sendMessage(page, { type: 'picker:start' });
+
+    const increment = page.locator('[data-testid="counter-increment"]');
+    const box = await increment.boundingBox();
+    expect(box, 'increment button has no layout box').toBeTruthy();
+
+    const pickedPromise = waitForMessage(page, 'picker:picked');
+    await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    const picked = await pickedPromise;
+    expect(picked).not.toHaveProperty('error');
+
+    // No probe fired and the count is unchanged — the full sequence was swallowed.
+    expect(await page.evaluate(() => (window as any).__probes)).toEqual({
+      pointerdown: 0,
+      mousedown: 0,
+      pointerup: 0,
+      mouseup: 0,
+    });
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('0');
+
+    // Picker is off (one pick per activation) — a normal click reaches the
+    // probes AND the app: teardown restored the events.
+    await increment.click();
+    await expect(page.locator('[data-testid="counter-value"]')).toHaveText('1');
+    const probesAfter = await page.evaluate(() => (window as any).__probes);
+    expect(probesAfter.pointerdown).toBeGreaterThan(0);
+    expect(probesAfter.pointerup).toBeGreaterThan(0);
+  });
+
+  test("Escape cancel does not reach the app's own Escape handlers", async ({ page }) => {
+    await page.goto('/demos/counter');
+    await page.waitForFunction(() => (window.__svelte_devtools__?.getTree().length ?? 0) > 0);
+
+    // App-side Escape probe, bubble phase on document (a typical
+    // close-the-modal handler).
+    await page.evaluate(() => {
+      (window as any).__escapes = 0;
+      document.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key === 'Escape') (window as any).__escapes++;
+      });
+    });
+
+    await sendMessage(page, { type: 'picker:start' });
+
+    const pickedPromise = waitForMessage(page, 'picker:picked');
+    await page.keyboard.press('Escape');
+    const picked = await pickedPromise;
+    expect(picked.componentId).toBeNull();
+
+    // The cancel was ours alone.
+    expect(await page.evaluate(() => (window as any).__escapes)).toBe(0);
+
+    // With the picker gone, Escape reaches the app again.
+    await page.keyboard.press('Escape');
+    await expect.poll(() => page.evaluate(() => (window as any).__escapes)).toBe(1);
+  });
 });
