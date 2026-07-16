@@ -77,6 +77,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   const effectTimings: Array<{
     effectId: string;
     label: string | null;
+    componentId: string | null;
     duration: number;
     depsCount: number;
   }> = [];
@@ -361,9 +362,13 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     registerEffect(fn, componentId) {
       const id = genId();
       const owner = componentId || currentComponentId();
+      const fnName = (fn as { name?: string }).name;
       effectMap.set(id, {
         id,
-        label: (fn as { name?: string }).name || null,
+        // The transform's IIFE binds every instrumented effect as
+        // `const __fn = ...` (transform.ts instrumentUserEffect), so an
+        // inferred name of '__fn' is meaningless — record null instead.
+        label: fnName && fnName !== '__fn' ? fnName : null,
         componentId: owner,
         fn,
         wrappedFn: null,
@@ -451,6 +456,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         effectTimings.push({
           effectId,
           label: effMeta?.label || null,
+          componentId: effMeta?.componentId ?? null,
           duration,
           depsCount: reactionRef ? Compat.getReactionDeps(reactionRef).length : 0,
         });

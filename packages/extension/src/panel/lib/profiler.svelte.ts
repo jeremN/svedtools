@@ -6,6 +6,7 @@ import { send } from './connection.svelte.js';
 export interface EffectTiming {
   effectId: NodeId;
   label: string | null;
+  componentId: NodeId | null;
   duration: number;
   depsCount: number;
 }
@@ -21,6 +22,7 @@ export interface ComponentStats {
 export interface EffectStats {
   effectId: NodeId;
   label: string | null;
+  componentId: NodeId | null;
   execCount: number;
   totalDuration: number;
   avgDuration: number;
@@ -91,17 +93,21 @@ export function getComponentStats(): ComponentStats[] {
 
 export function getEffectStats(): EffectStats[] {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
-  const map = new Map<NodeId, { effectId: NodeId; label: string | null; count: number; total: number }>();
+  const map = new Map<
+    NodeId,
+    { effectId: NodeId; label: string | null; componentId: NodeId | null; count: number; total: number }
+  >();
 
   for (const t of effectTimings) {
     let entry = map.get(t.effectId);
     if (!entry) {
-      entry = { effectId: t.effectId, label: t.label, count: 0, total: 0 };
+      entry = { effectId: t.effectId, label: t.label, componentId: t.componentId, count: 0, total: 0 };
       map.set(t.effectId, entry);
     }
     entry.count++;
     entry.total += t.duration;
     if (!entry.label && t.label) entry.label = t.label;
+    if (!entry.componentId && t.componentId) entry.componentId = t.componentId;
   }
 
   const stats: EffectStats[] = [];
@@ -109,6 +115,7 @@ export function getEffectStats(): EffectStats[] {
     stats.push({
       effectId: entry.effectId,
       label: entry.label,
+      componentId: entry.componentId,
       execCount: entry.count,
       totalDuration: entry.total,
       avgDuration: entry.count > 0 ? entry.total / entry.count : 0,

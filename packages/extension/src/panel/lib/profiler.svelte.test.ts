@@ -30,9 +30,15 @@ function renderTiming(overrides: Partial<RenderTiming> = {}): RenderTiming {
 }
 
 function effectTiming(
-  overrides: Partial<{ effectId: string; label: string | null; duration: number; depsCount: number }> = {},
+  overrides: Partial<{
+    effectId: string;
+    label: string | null;
+    componentId: string | null;
+    duration: number;
+    depsCount: number;
+  }> = {},
 ) {
-  return { effectId: 'e1', label: 'log', duration: 1, depsCount: 1, ...overrides };
+  return { effectId: 'e1', label: 'log', componentId: null, duration: 1, depsCount: 1, ...overrides };
 }
 
 describe('profiler store', () => {
@@ -109,7 +115,27 @@ describe('profiler store', () => {
       expect(componentStats.map((s) => s.name)).toEqual(['TodoList', 'Counter']);
 
       const effectStats = getEffectStats();
-      expect(effectStats).toEqual([{ effectId: 'e1', label: 'log', execCount: 2, totalDuration: 4, avgDuration: 2 }]);
+      expect(effectStats).toEqual([
+        { effectId: 'e1', label: 'log', componentId: null, execCount: 2, totalDuration: 4, avgDuration: 2 },
+      ]);
+    });
+
+    it('carries componentId through and backfills a null-then-set sequence', () => {
+      startRecording();
+      stopRecording();
+      processProfilerMessage({
+        type: 'profiler:data',
+        timings: [],
+        effectTimings: [
+          effectTiming({ effectId: 'e1', label: 'log', componentId: null, duration: 1 }),
+          effectTiming({ effectId: 'e1', label: 'log', componentId: 'c1', duration: 2 }),
+        ],
+      });
+
+      const effectStats = getEffectStats();
+      expect(effectStats).toEqual([
+        { effectId: 'e1', label: 'log', componentId: 'c1', execCount: 2, totalDuration: 3, avgDuration: 1.5 },
+      ]);
     });
 
     it('isRecording is set to false once data lands', () => {
