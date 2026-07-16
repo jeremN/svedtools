@@ -105,6 +105,17 @@ export interface ComponentTreeSnapshotMessage {
   nodes: ComponentNode[];
 }
 
+/**
+ * Reply to a `picker:start` pick (or Escape). `componentId` is null when the
+ * pick was cancelled (Escape) or the clicked element has no owning component
+ * (no componentMap entry whose filename matches its `__svelte_meta` file) —
+ * either way the panel just exits picking mode.
+ */
+export interface PickerPickedMessage {
+  type: 'picker:picked';
+  componentId: NodeId | null;
+}
+
 /** Current protocol version — increment on breaking changes */
 export const PROTOCOL_VERSION = 1;
 
@@ -120,7 +131,8 @@ export type BridgeToPanelMessage =
   | GraphUpdateMessage
   | ProfilerDataMessage
   | TraceUpdateMessage
-  | BridgeReadyMessage;
+  | BridgeReadyMessage
+  | PickerPickedMessage;
 
 // -- Panel → Bridge messages (from extension to page) --
 
@@ -200,6 +212,20 @@ export interface DevtoolsPanelDisconnectedMessage {
   type: 'devtools:panel-disconnected';
 }
 
+/**
+ * Element-picker requests (plan 021). `picker:start` arms crosshair mode:
+ * the bridge highlights the hovered element and resolves the next page click
+ * to a component, replying with `picker:picked`. `picker:stop` cancels
+ * without waiting for a click (also sent implicitly by the panel closing).
+ */
+export interface PickerStartRequest {
+  type: 'picker:start';
+}
+
+export interface PickerStopRequest {
+  type: 'picker:stop';
+}
+
 /** All messages sent from panel (extension) to bridge (page) */
 export type PanelToBridgeMessage =
   | InspectComponentRequest
@@ -214,7 +240,9 @@ export type PanelToBridgeMessage =
   | OpenInEditorRequest
   | TreeRequestMessage
   | DevtoolsPanelConnectedMessage
-  | DevtoolsPanelDisconnectedMessage;
+  | DevtoolsPanelDisconnectedMessage
+  | PickerStartRequest
+  | PickerStopRequest;
 
 // -- Extension-internal messages (not sent over postMessage wire) --
 
@@ -256,6 +284,9 @@ const VALID_MESSAGE_TYPES = new Set([
   'tree:request',
   'devtools:panel-connected',
   'devtools:panel-disconnected',
+  'picker:start',
+  'picker:stop',
+  'picker:picked',
 ]);
 
 /** Type guard for our wire messages — validates source AND payload shape */

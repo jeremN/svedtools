@@ -11,6 +11,7 @@ export const VALID_BRIDGE_TYPES = new Set([
   'profiler:data',
   'trace:update',
   'bridge:ready',
+  'picker:picked',
 ]);
 
 export const VALID_PANEL_TYPES = new Set([
@@ -25,6 +26,8 @@ export const VALID_PANEL_TYPES = new Set([
   'highlight:component',
   'open-in-editor',
   'tree:request',
+  'picker:start',
+  'picker:stop',
 ]);
 
 export function isValidMessage(message: unknown, validTypes: Set<string>): boolean {

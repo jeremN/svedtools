@@ -61,6 +61,18 @@ describe('isValidMessage', () => {
     expect(isValidMessage({ type: 'graph:subscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
     expect(isValidMessage({ type: 'graph:unsubscribe' }, VALID_BRIDGE_TYPES)).toBe(false);
   });
+
+  it('accepts picker:start for the panel direction', () => {
+    expect(isValidMessage({ type: 'picker:start' }, VALID_PANEL_TYPES)).toBe(true);
+  });
+
+  it('accepts picker:picked for the bridge direction', () => {
+    expect(isValidMessage({ type: 'picker:picked', componentId: 'sdt-1' }, VALID_BRIDGE_TYPES)).toBe(true);
+  });
+
+  it('rejects picker:picked as a panel message', () => {
+    expect(isValidMessage({ type: 'picker:picked', componentId: null }, VALID_PANEL_TYPES)).toBe(false);
+  });
 });
 
 describe('isTrustedPanelSender', () => {
@@ -146,6 +158,8 @@ describe('isValidPanelMessage', () => {
     expect(isValidPanelMessage({ type: 'tree:request' })).toBe(true);
     expect(isValidPanelMessage({ type: 'profiler:start' })).toBe(true);
     expect(isValidPanelMessage({ type: 'profiler:stop' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'picker:start' })).toBe(true);
+    expect(isValidPanelMessage({ type: 'picker:stop' })).toBe(true);
   });
 
   it('is permissive about extra unknown fields on an otherwise-valid message', () => {
