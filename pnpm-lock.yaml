@@ -129,9 +129,6 @@ importers:
 
   packages/vite-plugin:
     dependencies:
-      '@svelte-devtools/shared':
-        specifier: workspace:*
-        version: link:../shared
       acorn:
         specifier: ^8.16.0
         version: 8.16.0
