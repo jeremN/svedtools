@@ -10,23 +10,7 @@
  */
 
 import { showHighlight } from './highlight.js';
-
-/**
- * Reads the filename Svelte's dev-mode instrumentation stamped on an
- * element. Defensive about shape: the type declared in ./types.ts (and read
- * by highlight.ts) is the flat `{ file, line, column }` form, but the
- * currently-tested Svelte range (see compat.ts TESTED_SVELTE_RANGE) actually
- * nests it as `{ parent, loc: { file, line, column } }` (see
- * svelte/src/internal/client/dev/elements.js `assign_location`). Reading
- * both keeps this resolution working across that drift without touching
- * highlight.ts or the ambient type (out of scope for this module — see the
- * plan's maintenance note about keeping the two matchers in sync).
- */
-export function getSvelteMetaFile(el: Element): string | null {
-  const meta = el.__svelte_meta as { file?: string; loc?: { file?: string } } | null | undefined;
-  if (!meta) return null;
-  return meta.loc?.file ?? meta.file ?? null;
-}
+import { getSvelteMetaFile } from './svelte-meta.js';
 
 /** Walks up from `target` (self included) to the nearest element carrying Svelte dev-mode location info. */
 function resolvePickableElement(target: EventTarget | null): Element | null {

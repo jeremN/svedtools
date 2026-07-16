@@ -17,7 +17,8 @@ import { Compat, detectSvelteVersion } from './compat.js';
 import { safeSerialize, summarizeDomMutation, serializeChildrenAtPath } from './serializer.js';
 import { showHighlight, findDomElementsByFilename } from './highlight.js';
 import { applyEditAtPath } from './state-editor.js';
-import { startPicker, stopPicker, getSvelteMetaFile } from './picker.js';
+import { startPicker, stopPicker } from './picker.js';
+import { getSvelteMetaFile } from './svelte-meta.js';
 import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types.js';
 
 (function () {
