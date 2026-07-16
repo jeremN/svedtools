@@ -204,4 +204,32 @@ test.describe('Panel UI', () => {
     await expect(pickerButton).toHaveAttribute('aria-pressed', 'false');
     await expect(appPage.locator('[data-testid="counter-value"]')).toHaveText('0');
   });
+
+  test('a page reload mid-pick resets the picker button (no stuck pressed state)', async ({ context }) => {
+    const appPage = await context.newPage();
+    await appPage.goto('/demos/counter');
+    await appPage.waitForFunction(() => !!window.__svelte_devtools__);
+
+    const { sw, origin: extensionOrigin } = await getExtensionOrigin(context);
+    const tabId = await getActiveTabId(sw);
+    expect(tabId, 'chrome.tabs.query({ active: true }) returned no tab for the app page').toBeDefined();
+    await waitForBridgeCached(sw, tabId!);
+
+    const panelPage = await openPanelPage(context, extensionOrigin, tabId!);
+    await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 5000 });
+
+    // Arm the picker, then kill the pick by reloading the inspected page —
+    // the bridge's picker state dies with the old document, so no
+    // picker:picked will ever arrive. The fresh page's bridge:ready must
+    // reset the optimistic pickerActive flag.
+    const pickerButton = panelPage.locator('.picker-btn');
+    await pickerButton.click();
+    await expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
+
+    await appPage.reload();
+    await appPage.waitForFunction(() => !!window.__svelte_devtools__);
+
+    await expect(panelPage.locator('.status-text.detected')).toBeVisible({ timeout: 10_000 });
+    await expect(pickerButton).toHaveAttribute('aria-pressed', 'false', { timeout: 10_000 });
+  });
 });

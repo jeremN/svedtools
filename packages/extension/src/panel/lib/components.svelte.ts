@@ -151,6 +151,14 @@ export function processMessage(message: BridgeToPanelMessage): void {
       pickerActive = false;
       break;
     }
+
+    case 'bridge:ready': {
+      // A fresh bridge means any in-flight pick died with the old page
+      // (reload or navigation) — the optimistic pickerActive flag would
+      // otherwise stick, since no picker:picked will ever arrive for it.
+      pickerActive = false;
+      break;
+    }
   }
 }
 
