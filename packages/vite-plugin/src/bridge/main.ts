@@ -16,6 +16,7 @@
 import { Compat, detectSvelteVersion } from './compat.js';
 import { safeSerialize, summarizeDomMutation, serializeChildrenAtPath } from './serializer.js';
 import { showHighlight, findDomElementsByFilename } from './highlight.js';
+import { applyEditAtPath } from './state-editor.js';
 import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types.js';
 
 (function () {
@@ -124,6 +125,14 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
   // Component mount/unmount events and request/response messages stay
   // ungated — their cost is per-mount or per-request, not per-write.
   let panelConnected = false;
+
+  // -- Captured Svelte internals namespace (plan 018) --
+  // A compiled module's `$` namespace, handed to onPop by the transform
+  // (instrumentPop). First mount wins — every module in a dev app shares the
+  // same svelte/internal/client instance. Used only by Compat.setValue for
+  // panel-initiated state edits; null until the first instrumented mount,
+  // which is fine (there is nothing to edit before anything mounts).
+  let svelteInternals: unknown = null;
 
   // -- Live reactivity-graph subscription (plan 008) --
   // The panel subscribes while the Reactivity tab is visible; the bridge then
@@ -270,6 +279,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
       // a warm dev-server session may still be running an older cached
       // transform that calls onPop() bare, so guard for that.
       if (internals) {
+        if (!svelteInternals) svelteInternals = internals;
         Compat.registerComponentTeardown(internals, () => bridge.removeComponent(id));
       }
 
@@ -655,6 +665,38 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
     return rid;
   }
 
+  /**
+   * Build + emit the state:snapshot for one component. Shared by the
+   * inspect:component request and the state:edit handler, which re-emits the
+   * authoritative snapshot after EVERY edit attempt so the panel confirms an
+   * applied edit or reverts a refused one. The reported `type` corrects
+   * tagged deriveds at read time (the transform registers $.tag($.state(...))
+   * and $.tag($.derived(...)) identically, so meta.type alone says 'state'
+   * for both — see Compat.isDerivedSignal).
+   */
+  function emitStateSnapshot(componentId: string): void {
+    if (!componentMap.has(componentId)) return;
+    const signals: unknown[] = [];
+    for (const [signal, meta] of signalMap) {
+      if (meta.componentId !== componentId) continue;
+      let rawValue: unknown;
+      try {
+        rawValue = Compat.getValue(signal);
+      } catch {
+        rawValue = undefined;
+      }
+      let value: unknown = null;
+      try {
+        value = safeSerialize(rawValue);
+      } catch {
+        // serializer fails on hostile getters — fall through with null
+      }
+      const reportedType = meta.type === 'state' && Compat.isDerivedSignal(signal) ? 'derived' : meta.type || 'state';
+      signals.push({ id: meta.id, label: meta.label, type: reportedType, value });
+    }
+    emit({ type: 'state:snapshot', componentId, signals });
+  }
+
   /** Resolve a panel-supplied rootId to its current live value (signal .v or derived value). */
   function resolveLiveValue(rootId: string): { ok: boolean; value: unknown } {
     const signal = idToSignal.get(rootId);
@@ -873,32 +915,7 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         break;
       }
       case 'inspect:component': {
-        const targetId = msg.id;
-        const comp = componentMap.get(targetId);
-        if (!comp) break;
-        const signals: unknown[] = [];
-        for (const [signal, meta] of signalMap) {
-          if (meta.componentId !== targetId) continue;
-          let rawValue: unknown;
-          try {
-            rawValue = Compat.getValue(signal);
-          } catch {
-            rawValue = undefined;
-          }
-          let value: unknown = null;
-          try {
-            value = safeSerialize(rawValue);
-          } catch {
-            // serializer fails on hostile getters — fall through with null
-          }
-          signals.push({
-            id: meta.id,
-            label: meta.label,
-            type: meta.type || 'state',
-            value,
-          });
-        }
-        emit({ type: 'state:snapshot', componentId: targetId, signals });
+        emitStateSnapshot(msg.id);
         break;
       }
       case 'graph:request': {
@@ -953,6 +970,43 @@ import type { Value, Reaction, ComponentFn, SvelteDevtoolsBridge } from './types
         const resolved = resolveLiveValue(rootId);
         const children = resolved.ok ? serializeChildrenAtPath(resolved.value, path) : null;
         emit({ type: 'state:expanded', rootId, path: rawPath, children });
+        break;
+      }
+      case 'state:edit': {
+        // Declared in the protocol since v1; built by plan 018. The SW-side
+        // shape validator already enforces signalId: string + path: string[]
+        // for panel traffic, but the page wire is reachable without the
+        // extension (e2e, other tooling) — re-normalize here.
+        const editMsg = msg as { signalId?: unknown; path?: unknown; value?: unknown };
+        if (typeof editMsg.signalId !== 'string') break;
+        const path = Array.isArray(editMsg.path) ? editMsg.path.map(String) : [];
+        const signal = idToSignal.get(editMsg.signalId);
+        const meta = signal ? signalMap.get(signal) : undefined;
+        if (!signal || !meta) break;
+        let edited = false;
+        if (path.length === 0) {
+          // Top-level replace — only source signals, through the app's own
+          // $.set. Proxy-registered object state has no top-level setter (the
+          // variable binding isn't ours to reassign) and is refused inside
+          // setValue by the Value-shape check.
+          edited = Compat.setValue(svelteInternals, signal, editMsg.value);
+        } else {
+          // Nested edit — assign through the live value; $state proxies fire
+          // their own reactivity from the set trap. Note edits deliberately
+          // bypass preMutation/onMutation (those wrap the transform's
+          // instrumented $.set call sites), so panel edits produce no
+          // trace:update entries.
+          let live: unknown;
+          try {
+            live = Compat.getValue(signal);
+          } catch {
+            live = undefined;
+          }
+          edited = applyEditAtPath(live, path, editMsg.value);
+        }
+        if (edited) markGraphDirty();
+        // Always answer with the authoritative snapshot — confirm or revert.
+        if (meta.componentId) emitStateSnapshot(meta.componentId);
         break;
       }
     }
