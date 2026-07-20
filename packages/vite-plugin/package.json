@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "acorn": "^8.16.0",
+    "acorn": "^8.17.0",
     "estree-walker": "^3.0.3",
     "launch-editor": "^2.12.0",
     "magic-string": "^0.30.21"
@@ -31,6 +31,6 @@
     "@types/node": "^25.9.1",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.1.5"
   }
 }
