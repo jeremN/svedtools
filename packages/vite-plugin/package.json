@@ -17,20 +17,20 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "acorn": "^8.16.0",
+    "acorn": "^8.19.0",
     "estree-walker": "^3.0.3",
-    "launch-editor": "^2.12.0",
+    "launch-editor": "^2.14.2",
     "magic-string": "^0.30.21"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0",
+    "svelte": "^5.57.2",
     "vite": "^5.4.12 || ^6.0.9 || ^7.0.0 || ^8.0.0"
   },
   "devDependencies": {
     "@types/estree": "^1.0.9",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.9",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.3.5"
   }
 }
