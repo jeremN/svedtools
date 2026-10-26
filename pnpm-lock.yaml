@@ -142,7 +142,7 @@ importers:
         specifier: ^0.30.21
         version: 0.30.21
       svelte:
-        specifier: ^5.57.2
+        specifier: ^5.0.0
         version: 5.57.2(@typescript-eslint/types@8.72.0)
     devDependencies:
       '@types/estree':
